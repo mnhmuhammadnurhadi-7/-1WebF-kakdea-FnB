@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-background: #F8F6F0;
+  --color-foreground: #1E2A28;
+
+  --color-ink: #1E2A28;
+  --color-muted: #5B6A65;
+  --color-muted-light: #8D9A95;
+  --color-border: #E6E2D3;
+
+  --color-accent: #B8791E;
+  --color-accent-bg: #F1E3CB;
+  --color-accent-tag: #FAF4E8;
+
+  --color-teal-deep: #113534;
+  --color-teal-active: #1B4B49;
+  --color-teal-soft: #AFC9C6;
+  --color-teal-mint: #EAF3F2;
+  --color-teal-success-bg: #E3EFE5;
+  --color-teal-success: #2B6E41;
+
+  --color-danger: #B23A2E;
+  --color-danger-bg: #FADED9;
+
+  --color-yellow-tag-bg: #F9EFCF;
+  --color-yellow-tag-ink: #8C5E07;
+
+  --color-card: #FFFFFF;
+  --color-card-alt: #FDFCF7;
+  --color-card-muted: #ECE9DB;
+  --color-sidebar-bg: #113534;
+  --color-sidebar-surface: rgba(255, 255, 255, 0.06);
+
+  --shadow-card: 0 4px 16px 0 rgba(30, 42, 40, 0.05);
+  --shadow-card-hover: 0 4px 12px 0 rgba(30, 42, 40, 0.1);
+  --shadow-fab: 0 6px 20px 0 rgba(184, 121, 30, 0.35);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
+
+  --font-heading: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-public-sans), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
+html, body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-ink);
+  font-family: var(--font-public-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+.font-heading {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-card-hover { box-shadow: var(--shadow-card-hover); }
+.shadow-fab { box-shadow: var(--shadow-fab); }
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+table, th, td {
+  border: none;
 }
