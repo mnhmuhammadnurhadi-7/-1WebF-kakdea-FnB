@@ -1,7 +1,12 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 const SearchIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -131,6 +136,109 @@ const recentOrders = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [summaryData, setSummaryData] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>(recentOrders);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    async function fetchData() {
+      try {
+        // Fetch dashboard summary
+        const summaryResponse = await api.dashboard.getSummary('7d');
+        if (summaryResponse.success) {
+          setSummaryData(summaryResponse.data);
+        }
+
+        // Fetch recent orders
+        const ordersResponse = await api.orders.getAll();
+        if (ordersResponse.success) {
+          const recentOrdersData = ordersResponse.data.slice(0, 4).map((order: any) => ({
+            id: order.id,
+            customer: order.customer?.nama || order.namaPemesan || 'Unknown',
+            source: order.jenisOrder,
+            amount: `Rp ${order.totalInvoice.toLocaleString('id-ID')}`,
+            status: 'Baru', // Since we don't have status field in orders table
+            date: new Date(order.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+            tags: [order.sumberInput === 'AI' ? 'ai' : 'manual'],
+          }));
+          setOrders(recentOrdersData);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return `Rp ${amount.toLocaleString('id-ID')}`;
+  };
+
+  // Update summary cards with real data
+  const displayCards = summaryData ? [
+    {
+      label: "Total Produk",
+      value: "12", // This would need products API
+      sub: "varian frozen & siap saji",
+      change: "+2 baru bulan ini",
+      changeTone: "success" as const,
+      icon: PackageIcon,
+      iconBg: "bg-teal-mint",
+      iconColor: "text-teal-active",
+    },
+    {
+      label: "Order Baru",
+      value: String(summaryData.order_baru?.total || 0),
+      sub: "order masuk",
+      change: `${Object.keys(summaryData.order_baru?.breakdown || {}).length} jenis`,
+      changeTone: "neutral" as const,
+      icon: CartIcon,
+      iconBg: "bg-accent-bg",
+      iconColor: "text-accent",
+    },
+    {
+      label: "Saldo Kas",
+      value: formatCurrency(summaryData.saldo_kas || 0),
+      sub: "kas utama",
+      change: "update real-time",
+      changeTone: "neutral" as const,
+      icon: WalletIcon,
+      iconBg: "bg-yellow-tag-bg",
+      iconColor: "text-yellow-tag-ink",
+    },
+    {
+      label: "Hutang Supplier",
+      value: formatCurrency(summaryData.hutang_supplier?.total || 0),
+      sub: `${summaryData.hutang_supplier?.total > 0 ? 'perlu dibayar' : 'lancar'}`,
+      change: summaryData.hutang_supplier?.total > 0 ? "perlu perhatian" : "aman ✅",
+      changeTone: summaryData.hutang_supplier?.total > 0 ? "danger" as const : "success" as const,
+      icon: TrendingUp,
+      iconBg: "bg-teal-success-bg",
+      iconColor: "text-teal-success",
+    },
+  ] : summaryCards;
+  if (loading) {
+    return (
+      <AppLayout activeMenu="dashboard">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted">Loading dashboard data...</div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout activeMenu="dashboard">
       <div className="flex flex-col gap-8">
@@ -156,7 +264,7 @@ export default function DashboardPage() {
 
         {/* Summary Grid */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((c) => (
+          {displayCards.map((c) => (
             <Card key={c.label} className="flex flex-col gap-4">
               <div className="flex items-start justify-between">
                 <div
@@ -407,7 +515,7 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border">
-              {recentOrders.map((o) => (
+              {orders.map((o) => (
                 <div
                   key={o.id}
                   className="flex items-center gap-4 px-4 py-3 hover:bg-card-alt transition-colors"
@@ -417,7 +525,7 @@ export default function DashboardPage() {
                       <span className="truncate text-[14px] font-semibold text-ink">
                         {o.customer}
                       </span>
-                      {o.tags.map((t) => (
+                      {o.tags.map((t: string) => (
                         <Badge key={t} variant={t as "ai" | "manual" | "source"}>
                           {t === "ai" ? "AI" : t === "manual" ? "MANUAL" : o.source}
                         </Badge>

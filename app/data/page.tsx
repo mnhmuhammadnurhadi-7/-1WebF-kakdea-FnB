@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { ChipSelector, type ChipOption } from "@/components/ui/ChipSelector";
 import { InputField } from "@/components/ui/InputField";
 import { Modal } from "@/components/ui/Modal";
+import { api } from "@/lib/api";
 
 const sheetTabs: ChipOption[] = [
   { id: "transaksi", label: "Transaksi" },
@@ -57,29 +59,6 @@ const transactionTypes = [
   { value: "lainnya", label: "Lain-lain" },
 ];
 
-const productList = [
-  { value: "nugget_ayam_500", label: "Nugget Ayam Premium 500g" },
-  { value: "nugget_ayam_250", label: "Nugget Ayam Premium 250g" },
-  { value: "sosis_sapi_500", label: "Sosis Sapi Bakar 500g" },
-  { value: "bakso_ikan_500", label: "Bakso Ikan Kenyal 500g" },
-  { value: "siomay_ayam_10", label: "Siomay Ayam Frozen (10 pcs)" },
-  { value: "pempek_ikan_isii", label: "Pempek Ikan Isi (8 pcs)" },
-  { value: "cilok_ayam_12", label: "Cilok Ayam Kenyal (12 pcs)" },
-  { value: "dimsum_udang_8", label: "Dimsum Udang Premium (8 pcs)" },
-  { value: "chicken_katsu_300", label: "Chicken Katsu Frozen 300g" },
-  { value: "tempura_udang_6", label: "Tempura Udang (6 pcs)" },
-  { value: "kentang_goreng_500", label: "Kentang Goreng Shoestring 500g" },
-  { value: "roti_bakar_coklat", label: "Roti Bakar Coklat Keju (frozen)" },
-];
-
-const customerList = [
-  { value: "c1", label: "Ibu Siti — Depok" },
-  { value: "c2", label: "Warung Barokah — Cimanggis" },
-  { value: "c3", label: "Toko Makmur — Lenteng Agung" },
-  { value: "c4", label: "Bu Aminah — Pasar Minggu" },
-  { value: "c5", label: "Kantin Masjid Al-Ikhlas" },
-];
-
 const sourceList = [
   { value: "wa", label: "WhatsApp" },
   { value: "dm_ig", label: "DM Instagram" },
@@ -94,6 +73,7 @@ const stockTypes = [
   { value: "kedaluwarsa", label: "Kedaluwarsa / Rusak" },
 ];
 
+// Note: order status field is not in database schema per requirements, but kept for UI reference
 const orderStatus = [
   { value: "baru", label: "Baru" },
   { value: "diproses", label: "Diproses" },
@@ -165,11 +145,60 @@ const initialForm: FormState = {
 type FormErrors = Partial<Record<string, string>>;
 
 export default function DataPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("transaksi");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSheet, setModalSheet] = useState(activeTab);
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<FormErrors>({});
+  
+  // Real data states
+  const [products, setProducts] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch data on mount
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    async function fetchMasterData() {
+      try {
+        setLoading(true);
+        const [productsRes, customersRes, suppliersRes] = await Promise.all([
+          api.products.getAll(),
+          api.customers.getAll(),
+          api.suppliers.getAll(),
+        ]);
+
+        if (productsRes.success) setProducts(productsRes.data);
+        if (customersRes.success) setCustomers(customersRes.data);
+        if (suppliersRes.success) setSuppliers(suppliersRes.data);
+      } catch (error) {
+        console.error('Error fetching master data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMasterData();
+  }, []);
+
+  // Convert data to select options
+  const productList = products.map(p => ({
+    value: String(p.id),
+    label: `${p.namaBarang}${p.varian ? ` - ${p.varian}` : ''}`,
+  }));
+
+  const customerList = customers.map(c => ({
+    value: String(c.id),
+    label: `${c.nama}${c.alamat ? ` - ${c.alamat}` : ''}`,
+  }));
 
   const openModal = () => {
     setModalSheet(activeTab);
@@ -222,12 +251,61 @@ export default function DataPage() {
     return e;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length === 0) {
-      // TODO: integrate API call — this is design-only
-      setModalOpen(false);
+      try {
+        // Call appropriate API based on modal sheet
+        if (modalSheet === "transaksi") {
+          // Determine transaction type and call appropriate endpoint
+          await api.transactions.createDirectCost({
+            tanggal: form.transaksi.tanggal,
+            business_unit: 'PABRIK', // Default, should be from form
+            transaction_type_id: 1, // Would need to map from form.transaksi.jenis
+            detail_transaksi: form.transaksi.deskripsi,
+            nominal: parseFloat(form.transaksi.nominal),
+            jenis_kas: 'Kas Utama',
+          });
+        } else if (modalSheet === "stok") {
+          await api.stock.createMovement({
+            product_id: parseInt(form.stok.produk),
+            tanggal: form.stok.tanggal,
+            tipe: form.stok.jenis.toUpperCase(),
+            jumlah: parseInt(form.stok.jumlah),
+            keterangan: form.stok.catatan,
+          });
+        } else if (modalSheet === "customer") {
+          await api.customers.create({
+            kode_customer: `CUST${Date.now()}`,
+            nama: form.customer.nama,
+            alamat: form.customer.alamat,
+            contact_person: form.customer.kontak,
+            telp: form.customer.telepon,
+            bank_nama: form.customer.bank,
+            rekening: form.customer.rek,
+            keterangan: form.customer.catatan,
+          });
+        } else if (modalSheet === "supplier") {
+          await api.suppliers.create({
+            kode_supplier: `SUP${Date.now()}`,
+            nama: form.supplier.nama,
+            alamat: form.supplier.alamat,
+            contact_person: form.supplier.kontak,
+            telp: form.supplier.telepon,
+            bank_nama: form.supplier.bank,
+            rekening: form.supplier.rek,
+            keterangan: form.supplier.catatan,
+          });
+        }
+        
+        setModalOpen(false);
+        // Refresh data
+        window.location.reload();
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        alert('Terjadi kesalahan saat menyimpan data');
+      }
     }
   };
 
@@ -669,10 +747,59 @@ export default function DataPage() {
 }
 
 /**
- * Preview table/card untuk tiap sheet — placeholder tampilan data.
- * (Fokus fitur di sini: DESIGN + TOMBOL TAMBAH + MODAL — bukan real data/API)
+ * Preview table/card untuk tiap sheet — sekarang dengan real data dari API.
  */
 function SheetPreview({ tab }: { tab: string }) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        let response;
+        
+        switch (tab) {
+          case 'transaksi':
+            response = await api.transactions.getAll();
+            break;
+          case 'stok':
+            response = await api.stock.getAll();
+            break;
+          case 'order':
+            response = await api.orders.getAll();
+            break;
+          case 'customer':
+            response = await api.customers.getAll();
+            break;
+          case 'supplier':
+            response = await api.suppliers.getAll();
+            break;
+          default:
+            response = { success: true, data: [] };
+        }
+
+        if (response.success) {
+          setData(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [tab]);
+
+  if (loading) {
+    return (
+      <Card className="flex items-center justify-center py-16">
+        <div className="text-muted">Loading data...</div>
+      </Card>
+    );
+  }
+
   if (tab === "transaksi") {
     return (
       <Card className="p-0 overflow-hidden">
@@ -688,26 +815,25 @@ function SheetPreview({ tab }: { tab: string }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {[
-              { t: "05 Sep 2026", j: "Penjualan Produk", d: "Order GF-1044", db: "92.000", kr: "", s: "AI" },
-              { t: "05 Sep 2026", j: "Penjualan Produk", d: "DM IG Toko Barokah", db: "185.000", kr: "", s: "AI" },
-              { t: "04 Sep 2026", j: "Pembelian Bahan Baku", d: "Daging ayam 10kg", db: "", kr: "320.000", s: "MANUAL" },
-              { t: "04 Sep 2026", j: "Penjualan Produk", d: "WA Bu Siti", db: "240.000", kr: "", s: "AI" },
-              { t: "04 Sep 2026", j: "Ongkos Kirim", d: "GrabExpress Depok", db: "", kr: "25.000", s: "MANUAL" },
-              { t: "03 Sep 2026", j: "Listrik & Air", d: "Tagihan PLTN bulan ini", db: "", kr: "485.000", s: "MANUAL" },
-            ].map((row, i) => (
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-8 text-center text-muted">
+                  Belum ada data transaksi
+                </td>
+              </tr>
+            ) : data.map((row: any, i: number) => (
               <tr key={i} className="hover:bg-card-alt transition-colors">
-                <td className="px-5 py-3 text-muted">{row.t}</td>
-                <td className="px-5 py-3 font-medium text-ink">{row.j}</td>
-                <td className="px-5 py-3 text-ink">{row.d}</td>
+                <td className="px-5 py-3 text-muted">{new Date(row.tanggal).toLocaleDateString('id-ID')}</td>
+                <td className="px-5 py-3 font-medium text-ink">{row.transaksi || row.keterangan || row.type}</td>
+                <td className="px-5 py-3 text-ink">{row.detailTransaksi || row.keterangan || '-'}</td>
                 <td className="px-5 py-3 text-right font-semibold text-teal-success">
-                  {row.db ? `Rp ${row.db}` : "-"}
+                  {row.debit ? `Rp ${row.debit.toLocaleString('id-ID')}` : "-"}
                 </td>
                 <td className="px-5 py-3 text-right font-semibold text-danger">
-                  {row.kr ? `Rp ${row.kr}` : "-"}
+                  {row.kredit ? `Rp ${row.kredit.toLocaleString('id-ID')}` : "-"}
                 </td>
                 <td className="px-5 py-3">
-                  <Badge variant={row.s === "AI" ? "ai" : "manual"}>{row.s}</Badge>
+                  <Badge variant={row.sumberInput === 'AI' ? "ai" : "manual"}>{row.sumberInput || 'MANUAL'}</Badge>
                 </td>
               </tr>
             ))}
@@ -720,11 +846,15 @@ function SheetPreview({ tab }: { tab: string }) {
   if (tab === "stok") {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {productList.slice(0, 8).map((p, i) => (
-          <Card key={p.value} className="flex flex-col gap-3">
+        {data.length === 0 ? (
+          <Card className="col-span-full flex items-center justify-center py-16">
+            <div className="text-muted">Belum ada data produk</div>
+          </Card>
+        ) : data.map((product: any, i: number) => (
+          <Card key={product.id} className="flex flex-col gap-3">
             <div className="flex items-start justify-between">
-              <Badge variant={i % 3 === 0 ? "new" : i % 3 === 1 ? "success" : "source"}>
-                {i % 3 === 0 ? "Stok aman" : i % 3 === 1 ? "Mau habis" : "Kedaluwarsa rawan"}
+              <Badge variant={product.status === 'AMAN' ? "success" : product.status === 'MENIPIS' ? "new" : "danger"}>
+                {product.status === 'AMAN' ? 'Stok aman' : product.status === 'MENIPIS' ? 'Mau habis' : 'Kritis'}
               </Badge>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-bg text-accent">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -735,15 +865,15 @@ function SheetPreview({ tab }: { tab: string }) {
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="font-heading text-[15px] font-semibold text-ink leading-snug">
-                {p.label}
+                {product.namaBarang}
               </span>
-              <span className="text-[12px] text-muted">SKU: {p.value.toUpperCase()}</span>
+              <span className="text-[12px] text-muted">SKU: {product.kodeProduk}</span>
             </div>
             <div className="flex items-baseline justify-between pt-1">
               <span className="font-heading text-[22px] font-bold text-ink">
-                {Math.floor(Math.random() * 40 + 5)}
+                {product.stokSaatIni}
               </span>
-              <span className="text-[12px] text-muted">pcs / pack</span>
+              <span className="text-[12px] text-muted">{product.satuan}</span>
             </div>
           </Card>
         ))}
@@ -755,40 +885,30 @@ function SheetPreview({ tab }: { tab: string }) {
     return (
       <Card className="p-0 overflow-hidden">
         <div className="flex flex-col">
-          {[
-            { id: "#ORD-0105", cust: "DM Instagram — Toko Barokah", amt: "Rp 185.000", st: "Baru", s: "AI", src: "DM IG", date: "Hari ini, 10:32" },
-            { id: "#ORD-0104", cust: "GrabFood #GF-1044", amt: "Rp 92.000", st: "Diproses", s: "AI", src: "GrabFood", date: "Hari ini, 09:15" },
-            { id: "#ORD-0103", cust: "Bu Siti — WA", amt: "Rp 240.000", st: "Selesai", s: "MANUAL", src: "WA", date: "Kemarin, 18:44" },
-            { id: "#ORD-0102", cust: "Warung Makmur — COD", amt: "Rp 65.000", st: "Selesai", s: "MANUAL", src: "Manual", date: "Kemarin, 14:20" },
-          ].map((o) => (
+          {data.length === 0 ? (
+            <div className="flex items-center justify-center py-16 text-muted">
+              Belum ada data order
+            </div>
+          ) : data.map((order: any) => (
             <div
-              key={o.id}
+              key={order.id}
               className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-4 last:border-b-0 hover:bg-card-alt transition-colors"
             >
               <div className="flex min-w-[120px] flex-col">
-                <span className="font-heading text-[13px] font-bold text-accent">{o.id}</span>
-                <span className="text-[11px] text-muted">{o.date}</span>
+                <span className="font-heading text-[13px] font-bold text-accent">{order.kodeOrder}</span>
+                <span className="text-[11px] text-muted">{new Date(order.tanggal).toLocaleDateString('id-ID')}</span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-[14px] font-semibold text-ink">{o.cust}</span>
+                <span className="text-[14px] font-semibold text-ink">{order.customer?.nama || order.namaPemesan || 'Unknown'}</span>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={o.s === "AI" ? "ai" : "manual"}>{o.s}</Badge>
-                  <Badge variant="source">{o.src}</Badge>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                      o.st === "Baru"
-                        ? "bg-teal-success-bg text-teal-success"
-                        : o.st === "Diproses"
-                        ? "bg-accent-tag text-accent"
-                        : "bg-card-muted text-muted"
-                    }`}
-                  >
-                    {o.st}
-                  </span>
+                  <Badge variant={order.sumberInput === 'AI' ? "ai" : "manual"}>{order.sumberInput}</Badge>
+                  <Badge variant="source">{order.jenisOrder}</Badge>
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-heading text-[18px] font-bold text-ink">{o.amt}</div>
+                <div className="font-heading text-[18px] font-bold text-ink">
+                  Rp {order.totalInvoice.toLocaleString('id-ID')}
+                </div>
               </div>
             </div>
           ))}
@@ -807,30 +927,36 @@ function SheetPreview({ tab }: { tab: string }) {
               <th className="text-left px-5 py-3 font-semibold">Telepon</th>
               <th className="text-left px-5 py-3 font-semibold">Alamat</th>
               <th className="text-right px-5 py-3 font-semibold">Saldo Piutang</th>
-              <th className="text-right px-5 py-3 font-semibold">Order terakhir</th>
+              <th className="text-right px-5 py-3 font-semibold">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {customerList.map((c, i) => (
-              <tr key={c.value} className="hover:bg-card-alt transition-colors">
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-8 text-center text-muted">
+                  Belum ada data customer
+                </td>
+              </tr>
+            ) : data.map((customer: any, i: number) => (
+              <tr key={customer.id} className="hover:bg-card-alt transition-colors">
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-mint text-[12px] font-bold text-teal-active">
-                      {c.label.slice(0, 2).toUpperCase()}
+                      {customer.nama.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-semibold text-ink">{c.label}</span>
-                      <span className="text-[11px] text-muted">ID: {c.value.toUpperCase()}</span>
+                      <span className="font-semibold text-ink">{customer.nama}</span>
+                      <span className="text-[11px] text-muted">ID: {customer.kodeCustomer}</span>
                     </div>
                   </div>
                 </td>
-                <td className="px-5 py-3 text-muted">08{12000000 + i * 13579}</td>
-                <td className="px-5 py-3 text-muted">Depok, Jawa Barat</td>
+                <td className="px-5 py-3 text-muted">{customer.telp || '-'}</td>
+                <td className="px-5 py-3 text-muted">{customer.alamat || '-'}</td>
                 <td className="px-5 py-3 text-right font-semibold text-accent">
-                  {i % 3 === 0 ? "Rp 0" : `Rp ${(i + 1) * 45}${"000"}`}
+                  {customer.saldoPiutang > 0 ? `Rp ${customer.saldoPiutang.toLocaleString('id-ID')}` : 'Rp 0'}
                 </td>
                 <td className="px-5 py-3 text-right text-muted">
-                  {i === 0 ? "Hari ini" : i === 1 ? "Kemarin" : `${i} hari lalu`}
+                  {customer.status || '-'}
                 </td>
               </tr>
             ))}
@@ -843,35 +969,32 @@ function SheetPreview({ tab }: { tab: string }) {
   // Supplier
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {[
-        { n: "CV Bahan Sejahtera", k: "Pak Hadi", t: "0812-0001-0001", tag: "Bahan baku utama", piutang: "Rp 1.200.000" },
-        { n: "Toko Kemasan Makmur", k: "Ibu Rina", t: "0812-0001-0002", tag: "Packaging & plastik", piutang: "Rp 0" },
-        { n: "Distributor Frozen Food", k: "Mas Anton", t: "0812-0001-0003", tag: "Reseller produk", piutang: "Rp 485.000" },
-        { n: "Warung Sayur Pak Darso", k: "Pak Darso", t: "0812-0001-0004", tag: "Sayur & bumbu", piutang: "Rp 65.000" },
-        { n: "Delivery Express JNE", k: "CS JNE", t: "1500-xxx", tag: "Ekspedisi & kurir", piutang: "Rp 320.000" },
-        { n: "Rental Alat Dapur", k: "Bang Joko", t: "0812-0001-0006", tag: "Sewa freezer & mixer", piutang: "Rp 0" },
-      ].map((s) => (
-        <Card key={s.n} className="flex flex-col gap-4">
+      {data.length === 0 ? (
+        <Card className="col-span-full flex items-center justify-center py-16">
+          <div className="text-muted">Belum ada data supplier</div>
+        </Card>
+      ) : data.map((supplier: any) => (
+        <Card key={supplier.id} className="flex flex-col gap-4">
           <div className="flex items-start justify-between">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-bg">
               <span className="font-heading text-[14px] font-bold text-accent">
-                {s.n.slice(0, 2).toUpperCase()}
+                {supplier.nama.slice(0, 2).toUpperCase()}
               </span>
             </div>
-            <Badge variant="source">{s.tag}</Badge>
+            <Badge variant="source">Supplier</Badge>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="font-heading text-[16px] font-semibold text-ink">{s.n}</span>
-            <span className="text-[12px] text-muted">CP: {s.k} · {s.t}</span>
+            <span className="font-heading text-[16px] font-semibold text-ink">{supplier.nama}</span>
+            <span className="text-[12px] text-muted">CP: {supplier.contactPerson || '-'} · {supplier.telp || '-'}</span>
           </div>
           <div className="flex items-center justify-between border-t border-border pt-3">
             <span className="text-[12px] text-muted">Hutang dagang</span>
             <span
               className={`font-heading text-[15px] font-bold ${
-                s.piutang === "Rp 0" ? "text-teal-success" : "text-danger"
+                supplier.saldoHutang === 0 ? "text-teal-success" : "text-danger"
               }`}
             >
-              {s.piutang}
+              {supplier.saldoHutang > 0 ? `Rp ${supplier.saldoHutang.toLocaleString('id-ID')}` : 'Rp 0'}
             </span>
           </div>
         </Card>

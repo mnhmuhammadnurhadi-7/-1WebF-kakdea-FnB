@@ -114,10 +114,10 @@ export default function AIPage() {
 
     setTimeout(() => {
       const isAddCommand = text.startsWith("/add") || text.toLowerCase().includes("jual") || text.toLowerCase().includes("beli") || text.toLowerCase().includes("order");
+      const lower = text.toLowerCase();
       let aiMessage: ChatMessage;
 
       if (isAddCommand) {
-        const lower = text.toLowerCase();
         let card: DraftCardData;
         if (lower.includes("jual")) {
           card = {

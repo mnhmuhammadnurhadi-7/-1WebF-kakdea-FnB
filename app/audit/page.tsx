@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ChipSelector, type ChipOption } from "@/components/ui/ChipSelector";
+import { api } from "@/lib/api";
 
 const sheetTabs: ChipOption[] = [
   { id: "semua", label: "Semua" },
@@ -92,129 +93,6 @@ interface AuditLog {
   perubahan?: { field: string; sebelum: string; sesudah: string }[];
 }
 
-const dummyLogs: AuditLog[] = [
-  {
-    id: "AUD-1290",
-    tanggal: "05 Sep 2026",
-    jam: "10:32:14",
-    sheet: "transaksi",
-    recordLabel: "TRX-2026-0189",
-    action: "CREATE",
-    source: "AI",
-    actor: "Asisten AI",
-    detail: "Penjualan Produk Rp 185.000 — DM IG Toko Barokah",
-  },
-  {
-    id: "AUD-1289",
-    tanggal: "05 Sep 2026",
-    jam: "10:31:58",
-    sheet: "order",
-    recordLabel: "#ORD-0105",
-    action: "CREATE",
-    source: "AI",
-    actor: "Asisten AI",
-    detail: "Order baru dari DM Instagram — Toko Barokah",
-  },
-  {
-    id: "AUD-1288",
-    tanggal: "05 Sep 2026",
-    jam: "09:20:03",
-    sheet: "stok",
-    recordLabel: "Nugget Ayam 500g",
-    action: "UPDATE",
-    source: "MANUAL",
-    actor: "Bu Pemilik",
-    detail: "Perubahan stok (opname fisik)",
-    perubahan: [
-      { field: "Current Stock", sebelum: "22 pcs", sesudah: "18 pcs" },
-    ],
-  },
-  {
-    id: "AUD-1287",
-    tanggal: "05 Sep 2026",
-    jam: "09:15:42",
-    sheet: "transaksi",
-    recordLabel: "TRX-2026-0188",
-    action: "CREATE",
-    source: "AI",
-    actor: "Asisten AI",
-    detail: "Penjualan Produk Rp 92.000 — GrabFood GF-1044",
-  },
-  {
-    id: "AUD-1286",
-    tanggal: "04 Sep 2026",
-    jam: "18:44:21",
-    sheet: "order",
-    recordLabel: "#ORD-0103",
-    action: "UPDATE",
-    source: "MANUAL",
-    actor: "Bu Pemilik",
-    detail: "Update status order → Selesai",
-    perubahan: [
-      { field: "Status", sebelum: "Diproses", sesudah: "Selesai" },
-    ],
-  },
-  {
-    id: "AUD-1285",
-    tanggal: "04 Sep 2026",
-    jam: "16:10:07",
-    sheet: "supplier",
-    recordLabel: "Warung Sayur Pak Darso",
-    action: "CREATE",
-    source: "MANUAL",
-    actor: "Bu Pemilik",
-    detail: "Supplier baru ditambahkan secara manual",
-  },
-  {
-    id: "AUD-1284",
-    tanggal: "04 Sep 2026",
-    jam: "14:02:55",
-    sheet: "customer",
-    recordLabel: "Warung Makmur — COD",
-    action: "UPDATE",
-    source: "MANUAL",
-    actor: "Admin Kakak",
-    detail: "Update data customer",
-    perubahan: [
-      { field: "Telepon", sebelum: "0812-0000-0000", sesudah: "0812-1234-5678" },
-      { field: "Alamat", sebelum: "-", sesudah: "Jl. Merdeka No. 45, Depok" },
-    ],
-  },
-  {
-    id: "AUD-1283",
-    tanggal: "04 Sep 2026",
-    jam: "11:24:18",
-    sheet: "transaksi",
-    recordLabel: "TRX-2026-0182",
-    action: "CREATE",
-    source: "MANUAL",
-    actor: "Bu Pemilik",
-    detail: "Pembelian Bahan Baku Rp 320.000 — Daging ayam 10kg",
-  },
-  {
-    id: "AUD-1282",
-    tanggal: "03 Sep 2026",
-    jam: "20:45:33",
-    sheet: "transaksi",
-    recordLabel: "TRX-2026-0175",
-    action: "DELETE",
-    source: "MANUAL",
-    actor: "Bu Pemilik",
-    detail: "Transaksi dibatalkan — double entry (duplikat TRX-2026-0174)",
-  },
-  {
-    id: "AUD-1281",
-    tanggal: "03 Sep 2026",
-    jam: "09:00:12",
-    sheet: "user",
-    recordLabel: "Admin Kakak",
-    action: "CREATE",
-    source: "MANUAL",
-    actor: "Bu Pemilik",
-    detail: "Akun pengguna baru ditambahkan (role: Admin Operasional)",
-  },
-];
-
 const sheetTone: Record<AuditSheet, string> = {
   transaksi: "source",
   stok: "ai",
@@ -246,18 +124,57 @@ export default function AuditPage() {
   const [sheet, setSheet] = useState("semua");
   const [source, setSource] = useState("semua");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const logs = dummyLogs.filter((l) => {
+  // Fetch audit logs on mount and when filters change
+  useEffect(() => {
+    async function fetchAuditLogs() {
+      try {
+        setLoading(true);
+        const response = await api.auditLog.getAll({
+          sheet: sheet === 'semua' ? undefined : sheet.toUpperCase(),
+          source: source === 'semua' ? undefined : source.toUpperCase(),
+          page: 1,
+          limit: 50,
+        });
+
+        if (response.success && response.data.logs) {
+          const formattedLogs = response.data.logs.map((log: any) => ({
+            id: String(log.id),
+            tanggal: new Date(log.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+            jam: new Date(log.createdAt).toLocaleTimeString('id-ID'),
+            sheet: log.sheet.toLowerCase() as AuditSheet,
+            recordLabel: log.recordLabel,
+            action: log.action as AuditAction,
+            source: log.source as AuditSource,
+            actor: log.user?.nama || 'Unknown',
+            detail: log.detail || '',
+            perubahan: log.perubahanJson ? JSON.parse(log.perubahanJson) : undefined,
+          }));
+          setLogs(formattedLogs);
+        }
+      } catch (error) {
+        console.error('Error fetching audit logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAuditLogs();
+  }, [sheet, source]);
+
+  const filteredLogs = logs.filter((l) => {
     const sheetOk = sheet === "semua" || l.sheet === sheet;
     const sourceOk = source === "semua" || l.source === source;
     return sheetOk && sourceOk;
   });
 
   const statsRingkasan = [
-    { l: "Total Aktivitas (30h)", v: logs.length, tone: "teal-active", icon: ClockIcon },
-    { l: "Diproses AI", v: logs.filter((l) => l.source === "AI").length, tone: "teal-active", icon: ClockIcon },
-    { l: "Input Manual", v: logs.filter((l) => l.source === "MANUAL").length, tone: "accent", icon: ClockIcon },
-    { l: "Perubahan Data", v: logs.filter((l) => l.action === "UPDATE" || l.action === "DELETE").length, tone: "danger", icon: ClockIcon },
+    { l: "Total Aktivitas (30h)", v: filteredLogs.length, tone: "teal-active", icon: ClockIcon },
+    { l: "Diproses AI", v: filteredLogs.filter((l) => l.source === "AI").length, tone: "teal-active", icon: ClockIcon },
+    { l: "Input Manual", v: filteredLogs.filter((l) => l.source === "MANUAL").length, tone: "accent", icon: ClockIcon },
+    { l: "Perubahan Data", v: filteredLogs.filter((l) => l.action === "UPDATE" || l.action === "DELETE").length, tone: "danger", icon: ClockIcon },
   ];
 
   return (
@@ -335,7 +252,18 @@ export default function AuditPage() {
         {/* Audit Timeline */}
         <Card className="p-0 overflow-hidden" padding="none">
           <div className="flex flex-col">
-            {logs.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-card-muted text-muted">
+                  {ClockIcon}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="font-heading text-[16px] font-semibold text-ink">
+                    Memuat catatan audit...
+                  </span>
+                </div>
+              </div>
+            ) : filteredLogs.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-card-muted text-muted">
                   {SearchIcon}
@@ -354,10 +282,10 @@ export default function AuditPage() {
                 {/* Timeline line */}
                 <div className="absolute left-10 top-0 bottom-0 w-px bg-border" />
 
-                {logs.map((l, idx) => {
+                {filteredLogs.map((l, idx) => {
                   const expanded = expandedId === l.id;
                   const meta = actionMeta[l.action];
-                  const last = idx === logs.length - 1;
+                  const last = idx === filteredLogs.length - 1;
                   return (
                     <div
                       key={l.id}
@@ -484,7 +412,7 @@ export default function AuditPage() {
           {/* Pagination placeholder */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-3.5 bg-card-alt">
             <span className="text-[12px] text-muted">
-              Menampilkan <b className="text-ink">{logs.length}</b> dari <b className="text-ink">{dummyLogs.length}</b> total catatan audit
+              Menampilkan <b className="text-ink">{filteredLogs.length}</b> dari <b className="text-ink">{logs.length}</b> total catatan audit
             </span>
             <div className="flex items-center gap-1.5">
               <Button variant="outline" size="sm">
