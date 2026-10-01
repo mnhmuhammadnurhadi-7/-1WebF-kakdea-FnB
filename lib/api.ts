@@ -200,40 +200,34 @@ export const suppliersApi = {
   },
 };
 
-// Transactions API
+// Transactions API (Entri Transaksi - generic, terikat ke JenisTransaksi)
 export const transactionsApi = {
-  getAll: async (filters?: { business_unit?: string; tanggal_mulai?: string; tanggal_selesai?: string; search?: string }) => {
+  getAll: async (filters?: { business_unit?: string; jenis_transaksi_id?: number; tanggal_mulai?: string; tanggal_selesai?: string; search?: string }) => {
     const params = new URLSearchParams();
     if (filters?.business_unit) params.append('business_unit', filters.business_unit);
+    if (filters?.jenis_transaksi_id) params.append('jenis_transaksi_id', filters.jenis_transaksi_id.toString());
     if (filters?.tanggal_mulai) params.append('tanggal_mulai', filters.tanggal_mulai);
     if (filters?.tanggal_selesai) params.append('tanggal_selesai', filters.tanggal_selesai);
     if (filters?.search) params.append('search', filters.search);
     return apiRequest<{ success: boolean; data: any }>(`/transactions?${params}`);
   },
 
-  createDirectCost: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/transactions/direct-cost', {
+  getById: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transactions/${id}`);
+  },
+
+  // Endpoint generic utama - dipakai form "Tambah Transaksi".
+  // data: { tanggal, jenis_transaksi_id, detail (keterangan), nominal,
+  //   debit?, kredit? (teks bebas, opsional), custom_data: {kolomId: value} }
+  create: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/transactions', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  createIndirectCost: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/transactions/indirect-cost', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  createCashTransaction: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/transactions/cash', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  delete: async (sumberTabel: string, id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/transactions/${sumberTabel}/${id}`, {
+  delete: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transactions/${id}`, {
       method: 'DELETE',
     });
   },
@@ -301,12 +295,137 @@ export const accountsApi = {
   },
 };
 
-// Transaction Types API
+// Transaction Types API (Master Transaksi - JenisTransaksi, full CRUD)
 export const transactionTypesApi = {
-  getAll: async (kategori?: string) => {
+  getAll: async (filters?: { business_unit?: string; aktif?: boolean }) => {
     const params = new URLSearchParams();
-    if (kategori) params.append('kategori', kategori);
+    if (filters?.business_unit) params.append('business_unit', filters.business_unit);
+    if (filters?.aktif !== undefined) params.append('aktif', filters.aktif.toString());
     return apiRequest<{ success: boolean; data: any }>(`/transaction-types?${params}`);
+  },
+
+  getById: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${id}`);
+  },
+
+  // data: { kode, nama_transaksi, arah: 'PEMASUKAN'|'PENGELUARAN', jenis_akun? (teks bebas, saran saja), unit_bisnis? }
+  create: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/transaction-types', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ---- Kolom custom per jenis ----
+  getColumns: async (jenisTransaksiId: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${jenisTransaksiId}/columns`);
+  },
+
+  // data: { nama_kolom, tipe_data: 'TEKS'|'ANGKA'|'TANGGAL'|'DROPDOWN', opsi_dropdown?: string[], urutan? }
+  createColumn: async (jenisTransaksiId: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${jenisTransaksiId}/columns`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateColumn: async (jenisTransaksiId: number, columnId: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${jenisTransaksiId}/columns/${columnId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteColumn: async (jenisTransaksiId: number, columnId: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transaction-types/${jenisTransaksiId}/columns/${columnId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Free Tables API ("Buat Tabel Bebas" - murni pendataan, terpisah dari
+// Master Transaksi/akuntansi)
+export const freeTablesApi = {
+  getAll: async () => {
+    return apiRequest<{ success: boolean; data: any }>('/free-tables');
+  },
+
+  getById: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${id}`);
+  },
+
+  // data: { nama_tabel, deskripsi?, kolom: [{nama_kolom, tipe_data, opsi_dropdown?}] }
+  create: async (data: any) => {
+    return apiRequest<{ success: boolean; data: any }>('/free-tables', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  createColumn: async (tableId: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${tableId}/columns`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateColumn: async (tableId: number, columnId: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${tableId}/columns/${columnId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteColumn: async (tableId: number, columnId: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${tableId}/columns/${columnId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  createRow: async (tableId: number, data: Record<string, any>) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${tableId}/rows`, {
+      method: 'POST',
+      body: JSON.stringify({ data }),
+    });
+  },
+
+  updateRow: async (tableId: number, rowId: number, data: Record<string, any>) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${tableId}/rows/${rowId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ data }),
+    });
+  },
+
+  deleteRow: async (tableId: number, rowId: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/free-tables/${tableId}/rows/${rowId}`, {
+      method: 'DELETE',
+    });
   },
 };
 
@@ -360,15 +479,17 @@ export const reportsApi = {
   },
 };
 
-// Audit Log API
+// Audit Log API - default backend 7 hari terakhir, kirim days untuk ubah
+// rentang (data lama TIDAK pernah dihapus, ini murni filter tampilan)
 export const auditLogApi = {
-  getAll: async (filters?: { sheet?: string; source?: string; search?: string; page?: number; limit?: number }) => {
+  getAll: async (filters?: { sheet?: string; source?: string; search?: string; page?: number; limit?: number; days?: number | 'all' }) => {
     const params = new URLSearchParams();
     if (filters?.sheet && filters.sheet !== 'semua') params.append('sheet', filters.sheet);
     if (filters?.source && filters.source !== 'semua') params.append('source', filters.source);
     if (filters?.search) params.append('search', filters.search);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.days !== undefined) params.append('days', filters.days.toString());
     return apiRequest<{ success: boolean; data: any }>(`/audit-log?${params}`);
   },
 };
@@ -410,4 +531,5 @@ export const api = {
   reports: reportsApi,
   auditLog: auditLogApi,
   partnerStores: partnerStoresApi,
+  freeTables: freeTablesApi,
 };

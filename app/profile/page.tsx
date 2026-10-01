@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/InputField";
 import { ChipSelector, type ChipOption } from "@/components/ui/ChipSelector";
+import { api } from "@/lib/api";
 
 const tabOptions: ChipOption[] = [
   { id: "profil", label: "Profil Toko" },
@@ -71,25 +73,26 @@ interface Pengaturan {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [tab, setTab] = useState("profil");
   const [savedFlash, setSavedFlash] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const [user, setUser] = useState<UserData>({
-    nama: "Bu Pemilik",
-    email: "bupemilik@bukudapur.id",
-    telepon: "0812-3456-7890",
+    nama: "",
+    email: "",
+    telepon: "",
     jabatan: "Pemilik Toko",
-    toko: "Buku Dapur — Frozen & Siap Saji",
+    toko: "Buku Dapur",
   });
 
   const [toko, setToko] = useState<TokoData>({
     nama: "Buku Dapur — Frozen & Siap Saji",
-    alamat: "Jl. Raya Depok No. 123, Cimanggis, Depok, Jawa Barat 16452",
-    telepon: "0812-3456-7890",
-    instagram: "@bukudapur.frozen",
-    whatsapp: "6281234567890",
-    deskripsi:
-      "Produsen frozen food & makanan siap saji rumahan dengan bahan premium, harga bersahabat, dan higienis.",
+    alamat: "",
+    telepon: "",
+    instagram: "",
+    whatsapp: "",
+    deskripsi: "",
   });
 
   const [pengaturan, setPengaturan] = useState<Pengaturan>({
@@ -101,6 +104,38 @@ export default function ProfilePage() {
     mataUang: "IDR (Rp)",
     bahasa: "Bahasa Indonesia",
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    async function fetchUser() {
+      try {
+        const res = await api.auth.getMe();
+        if (res.success && res.data) {
+          setUser((prev) => ({
+            ...prev,
+            nama: res.data.nama || prev.nama,
+            email: res.data.email || prev.email,
+          }));
+          setToko((prev) => ({
+            ...prev,
+            nama: res.data.nama ? `${res.data.nama} — Buku Dapur` : prev.nama,
+            telepon: prev.telepon || "",
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      } finally {
+        setLoadingUser(false);
+      }
+    }
+
+    fetchUser();
+  }, [router]);
 
   const handleSimpan = () => {
     setSavedFlash(true);
@@ -133,7 +168,9 @@ export default function ProfilePage() {
           <div className="flex flex-wrap items-end justify-between gap-4 px-6 pb-6 -mt-10">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-accent border-4 border-card shadow-card">
-                <span className="font-heading text-[28px] font-black text-white">BD</span>
+                <span className="font-heading text-[28px] font-black text-white">
+                  {toko.nama ? toko.nama.slice(0, 2).toUpperCase() : "BD"}
+                </span>
               </div>
               <div className="flex flex-col gap-1 pb-1">
                 <h2 className="font-heading text-[22px] font-bold text-ink leading-tight">
@@ -313,7 +350,9 @@ export default function ProfilePage() {
 
               <div className="flex items-center gap-4 rounded-xl border border-border bg-card-alt p-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent-bg">
-                  <span className="font-heading text-[20px] font-bold text-accent">BP</span>
+                  <span className="font-heading text-[20px] font-bold text-accent">
+                    {user.nama ? user.nama.slice(0, 2).toUpperCase() : "U"}
+                  </span>
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="font-heading text-[16px] font-bold text-ink truncate">
@@ -409,36 +448,29 @@ export default function ProfilePage() {
                   </svg>
                 </div>
                 <h3 className="font-heading text-[18px] font-semibold text-ink">
-                  Daftar Pengguna ({2})
+                  Daftar Pengguna ({1})
                 </h3>
               </div>
 
               <div className="flex flex-col divide-y divide-border rounded-xl border border-border overflow-hidden">
-                {[
-                  { inisial: "BP", nama: "Bu Pemilik", role: "Pemilik", email: "bupemilik@bukudapur.id", aktif: true, saya: true },
-                  { inisial: "AK", nama: "Admin Kakak", role: "Admin Operasional", email: "admin@bukudapur.id", aktif: true, saya: false },
-                ].map((u, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-card-alt transition-colors">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-bg">
-                      <span className="font-heading text-[14px] font-bold text-accent">
-                        {u.inisial}
-                      </span>
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[14px] font-semibold text-ink truncate">
-                          {u.nama}
-                        </span>
-                        {u.saya && <Badge variant="ai">Saya</Badge>}
-                      </div>
-                      <span className="text-[11px] text-muted truncate">{u.email}</span>
-                      <span className="text-[11px] text-muted">{u.role}</span>
-                    </div>
-                    <Badge variant={u.aktif ? "success" : "danger"}>
-                      {u.aktif ? "Aktif" : "Nonaktif"}
-                    </Badge>
+                <div className="flex items-center gap-3 px-4 py-3 hover:bg-card-alt transition-colors">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-bg">
+                    <span className="font-heading text-[14px] font-bold text-accent">
+                      {user.nama ? user.nama.slice(0, 2).toUpperCase() : "U"}
+                    </span>
                   </div>
-                ))}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold text-ink truncate">
+                        {user.nama || "Memuat..."}
+                      </span>
+                      <Badge variant="ai">Saya</Badge>
+                    </div>
+                    <span className="text-[11px] text-muted truncate">{user.email || "—"}</span>
+                    <span className="text-[11px] text-muted">{user.jabatan}</span>
+                  </div>
+                  <Badge variant="success">Aktif</Badge>
+                </div>
               </div>
 
               <Button variant="outline" size="md" fullWidth leftIcon={UserIcon}>

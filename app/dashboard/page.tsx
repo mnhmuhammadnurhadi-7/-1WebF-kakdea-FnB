@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
@@ -53,126 +53,69 @@ const WalletIcon = (
   </svg>
 );
 
-const summaryCards = [
-  {
-    label: "Total Produk",
-    value: "12",
-    sub: "varian frozen & siap saji",
-    change: "+2 baru bulan ini",
-    changeTone: "success" as const,
-    icon: PackageIcon,
-    iconBg: "bg-teal-mint",
-    iconColor: "text-teal-active",
-  },
-  {
-    label: "Order Hari Ini",
-    value: "18",
-    sub: "order masuk",
-    change: "2 sedang diproses",
-    changeTone: "neutral" as const,
-    icon: CartIcon,
-    iconBg: "bg-accent-bg",
-    iconColor: "text-accent",
-  },
-  {
-    label: "Pemasukan Bulan Ini",
-    value: "Rp 8.425.000",
-    sub: "dari total penjualan",
-    change: "+18% vs bulan lalu",
-    changeTone: "success" as const,
-    icon: TrendingUp,
-    iconBg: "bg-teal-success-bg",
-    iconColor: "text-teal-success",
-  },
-  {
-    label: "Saldo Kas",
-    value: "Rp 2.180.000",
-    sub: "per 5 Sept 2026",
-    change: "selisih oke ✅",
-    changeTone: "neutral" as const,
-    icon: WalletIcon,
-    iconBg: "bg-yellow-tag-bg",
-    iconColor: "text-yellow-tag-ink",
-  },
-];
+function formatCurrency(amount: number) {
+  if (amount >= 1_000_000) {
+    return `Rp ${(amount / 1_000_000).toFixed(1).replace(".0", "")}jt`;
+  }
+  if (amount >= 1_000) {
+    return `Rp ${(amount / 1_000).toFixed(0)}rb`;
+  }
+  return `Rp ${amount.toLocaleString("id-ID")}`;
+}
 
-const recentOrders = [
-  {
-    id: 1,
-    customer: "DM Instagram — Toko Barokah",
-    source: "DM IG",
-    amount: "Rp 185.000",
-    status: "Baru",
-    date: "Hari ini, 10:32",
-    tags: ["ai"],
-  },
-  {
-    id: 2,
-    customer: "GrabFood #GF-1044",
-    source: "GrabFood",
-    amount: "Rp 92.000",
-    status: "Diproses",
-    date: "Hari ini, 09:15",
-    tags: ["source"],
-  },
-  {
-    id: 3,
-    customer: "Bu Siti — WA",
-    source: "WA",
-    amount: "Rp 240.000",
-    status: "Selesai",
-    date: "Kemarin, 18:44",
-    tags: ["manual"],
-  },
-  {
-    id: 4,
-    customer: "Warung Makmur — COD",
-    source: "Manual",
-    amount: "Rp 65.000",
-    status: "Selesai",
-    date: "Kemarin, 14:20",
-    tags: ["manual"],
-  },
-];
+function formatDateLabel(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [summaryData, setSummaryData] = useState<any>(null);
-  const [orders, setOrders] = useState<any[]>(recentOrders);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [salesTrend, setSalesTrend] = useState<{ tanggal: string; total: number }[]>([]);
+  const [periode, setPeriode] = useState<"7d" | "30d">("7d");
+  const [productCount, setProductCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     async function fetchData() {
       try {
-        // Fetch dashboard summary
-        const summaryResponse = await api.dashboard.getSummary('7d');
-        if (summaryResponse.success) {
-          setSummaryData(summaryResponse.data);
+        const [summaryRes, ordersRes, productsRes, trendRes] = await Promise.all([
+          api.dashboard.getSummary("7d"),
+          api.orders.getAll(),
+          api.products.getAll(),
+          api.dashboard.getSalesTrend(periode),
+        ]);
+
+        if (summaryRes.success) setSummaryData(summaryRes.data);
+
+        if (ordersRes.success) {
+          const recent = ordersRes.data.slice(0, 4).map((order: any) => ({
+            id: order.id,
+            customer: order.customer?.nama || order.namaPemesan || "Unknown",
+            source: order.jenisOrder,
+            amount: `Rp ${order.totalInvoice.toLocaleString("id-ID")}`,
+            date: new Date(order.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+            tags: [order.sumberInput === "AI" ? "ai" : "manual"],
+          }));
+          setOrders(recent);
         }
 
-        // Fetch recent orders
-        const ordersResponse = await api.orders.getAll();
-        if (ordersResponse.success) {
-          const recentOrdersData = ordersResponse.data.slice(0, 4).map((order: any) => ({
-            id: order.id,
-            customer: order.customer?.nama || order.namaPemesan || 'Unknown',
-            source: order.jenisOrder,
-            amount: `Rp ${order.totalInvoice.toLocaleString('id-ID')}`,
-            status: 'Baru', // Since we don't have status field in orders table
-            date: new Date(order.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-            tags: [order.sumberInput === 'AI' ? 'ai' : 'manual'],
-          }));
-          setOrders(recentOrdersData);
+        if (productsRes.success) {
+          setProductCount(productsRes.data.length);
+        }
+
+        if (trendRes.success) {
+          setSalesTrend(trendRes.data);
         }
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error("Error fetching dashboard data:", error);
       } finally {
         setLoading(false);
       }
@@ -181,54 +124,71 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  // Format currency helper
-  const formatCurrency = (amount: number) => {
-    return `Rp ${amount.toLocaleString('id-ID')}`;
-  };
+  useEffect(() => {
+    if (!loading) {
+      api.dashboard.getSalesTrend(periode).then((res) => {
+        if (res.success) setSalesTrend(res.data);
+      });
+    }
+  }, [periode]);
 
-  // Update summary cards with real data
-  const displayCards = summaryData ? [
-    {
-      label: "Total Produk",
-      value: "12", // This would need products API
-      sub: "varian frozen & siap saji",
-      change: "+2 baru bulan ini",
-      changeTone: "success" as const,
-      icon: PackageIcon,
-      iconBg: "bg-teal-mint",
-      iconColor: "text-teal-active",
-    },
-    {
-      label: "Order Baru",
-      value: String(summaryData.order_baru?.total || 0),
-      sub: "order masuk",
-      change: `${Object.keys(summaryData.order_baru?.breakdown || {}).length} jenis`,
-      changeTone: "neutral" as const,
-      icon: CartIcon,
-      iconBg: "bg-accent-bg",
-      iconColor: "text-accent",
-    },
-    {
-      label: "Saldo Kas",
-      value: formatCurrency(summaryData.saldo_kas || 0),
-      sub: "kas utama",
-      change: "update real-time",
-      changeTone: "neutral" as const,
-      icon: WalletIcon,
-      iconBg: "bg-yellow-tag-bg",
-      iconColor: "text-yellow-tag-ink",
-    },
-    {
-      label: "Hutang Supplier",
-      value: formatCurrency(summaryData.hutang_supplier?.total || 0),
-      sub: `${summaryData.hutang_supplier?.total > 0 ? 'perlu dibayar' : 'lancar'}`,
-      change: summaryData.hutang_supplier?.total > 0 ? "perlu perhatian" : "aman ✅",
-      changeTone: summaryData.hutang_supplier?.total > 0 ? "danger" as const : "success" as const,
-      icon: TrendingUp,
-      iconBg: "bg-teal-success-bg",
-      iconColor: "text-teal-success",
-    },
-  ] : summaryCards;
+  const trendStats = useMemo(() => {
+    if (salesTrend.length === 0) return null;
+    const totals = salesTrend.map((d) => d.total);
+    const sum = totals.reduce((a, b) => a + b, 0);
+    const avg = Math.round(sum / totals.length);
+    const max = Math.max(...totals);
+    const min = Math.min(...totals);
+    const maxDay = salesTrend.find((d) => d.total === max);
+    const minDay = salesTrend.find((d) => d.total === min);
+    return { sum, avg, max, min, maxDay, minDay };
+  }, [salesTrend]);
+
+  const displayCards = summaryData
+    ? [
+        {
+          label: "Total Produk",
+          value: productCount !== null ? String(productCount) : "—",
+          sub: "total aktif",
+          change: "",
+          changeTone: "neutral" as const,
+          icon: PackageIcon,
+          iconBg: "bg-teal-mint",
+          iconColor: "text-teal-active",
+        },
+        {
+          label: "Order Baru",
+          value: String(summaryData.order_baru?.total || 0),
+          sub: "order masuk",
+          change: `${Object.keys(summaryData.order_baru?.breakdown || {}).length} jenis`,
+          changeTone: "neutral" as const,
+          icon: CartIcon,
+          iconBg: "bg-accent-bg",
+          iconColor: "text-accent",
+        },
+        {
+          label: "Saldo Kas",
+          value: formatCurrency(summaryData.saldo_kas || 0),
+          sub: "kas utama",
+          change: "update real-time",
+          changeTone: "neutral" as const,
+          icon: WalletIcon,
+          iconBg: "bg-yellow-tag-bg",
+          iconColor: "text-yellow-tag-ink",
+        },
+        {
+          label: "Hutang Supplier",
+          value: formatCurrency(summaryData.hutang_supplier?.total || 0),
+          sub: summaryData.hutang_supplier?.total > 0 ? "perlu dibayar" : "lancar",
+          change: summaryData.hutang_supplier?.total > 0 ? "perlu perhatian" : "aman",
+          changeTone: summaryData.hutang_supplier?.total > 0 ? ("danger" as const) : ("success" as const),
+          icon: TrendingUp,
+          iconBg: "bg-teal-success-bg",
+          iconColor: "text-teal-success",
+        },
+      ]
+    : null;
+
   if (loading) {
     return (
       <AppLayout activeMenu="dashboard">
@@ -263,171 +223,222 @@ export default function DashboardPage() {
         </div>
 
         {/* Summary Grid */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {displayCards.map((c) => (
-            <Card key={c.label} className="flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg ${c.iconBg} ${c.iconColor}`}
-                >
-                  {c.icon}
+        {displayCards ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {displayCards.map((c) => (
+              <Card key={c.label} className="flex flex-col gap-4">
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${c.iconBg} ${c.iconColor}`}
+                  >
+                    {c.icon}
+                  </div>
+                  <span className="text-muted">{ArrowUpRight}</span>
                 </div>
-                <span className="text-muted">{ArrowUpRight}</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[12px] font-medium text-muted">{c.label}</span>
-                <span className="font-heading text-[24px] font-bold text-ink leading-tight">
-                  {c.value}
-                </span>
-                <span className="text-[12px] text-muted">{c.sub}</span>
-              </div>
-              <div
-                className={`text-[12px] font-semibold ${
-                  c.changeTone === "success" ? "text-teal-success" : "text-muted"
-                }`}
-              >
-                {c.change}
-              </div>
-            </Card>
-          ))}
-        </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[12px] font-medium text-muted">{c.label}</span>
+                  <span className="font-heading text-[24px] font-bold text-ink leading-tight">
+                    {c.value}
+                  </span>
+                  <span className="text-[12px] text-muted">{c.sub}</span>
+                </div>
+                {c.change && (
+                  <div
+                    className={`text-[12px] font-semibold ${
+                      c.changeTone === "success" ? "text-teal-success" : "text-muted"
+                    }`}
+                  >
+                    {c.change}
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="flex flex-col gap-4 animate-pulse">
+                <div className="h-8 w-8 rounded-lg bg-card-muted" />
+                <div className="flex flex-col gap-2">
+                  <div className="h-3 w-20 rounded bg-card-muted" />
+                  <div className="h-6 w-24 rounded bg-card-muted" />
+                  <div className="h-3 w-28 rounded bg-card-muted" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
+        {/* Sales Trend Chart */}
         <Card className="flex flex-col gap-5">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-col gap-1">
               <h3 className="font-heading text-[20px] font-semibold text-ink">
-                Tren Penjualan 7 Hari Terakhir
+                Tren Penjualan {periode === "7d" ? "7 Hari" : "30 Hari"} Terakhir
               </h3>
               <p className="text-[13px] text-muted">
-                Perbandingan aktual vs target penjualan per hari.
+                Total penjualan per hari dari data order aktual.
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-1 rounded-lg bg-card-muted p-1">
-                <button type="button" className="rounded-md bg-card px-3 py-1.5 text-[12px] font-semibold text-ink shadow-sm">
-                  7H
-                </button>
-                <button type="button" className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted hover:text-ink">
-                  30H
-                </button>
-                <button type="button" className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted hover:text-ink">
-                  90H
-                </button>
+            <div className="inline-flex items-center gap-1 rounded-lg bg-card-muted p-1">
+              <button
+                type="button"
+                onClick={() => setPeriode("7d")}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                  periode === "7d"
+                    ? "bg-card text-ink shadow-sm"
+                    : "text-muted hover:text-ink"
+                }`}
+              >
+                7H
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriode("30d")}
+                className={`rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                  periode === "30d"
+                    ? "bg-card text-ink shadow-sm"
+                    : "text-muted hover:text-ink"
+                }`}
+              >
+                30H
+              </button>
+            </div>
+          </div>
+
+          {salesTrend.length === 0 ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-muted">Belum ada data penjualan untuk periode ini</div>
+            </div>
+          ) : (
+            <>
+              {/* Bar Chart */}
+              <div className="relative w-full overflow-x-auto">
+                <svg
+                  viewBox={`0 0 ${Math.max(salesTrend.length * 60, 360)} 260`}
+                  className="h-[260px] w-full"
+                  preserveAspectRatio="xMinYMid meet"
+                >
+                  {(() => {
+                    const maxVal = Math.max(...salesTrend.map((d) => d.total), 1);
+                    const chartLeft = 56;
+                    const chartRight = salesTrend.length * 60;
+                    const chartTop = 20;
+                    const chartBottom = 220;
+                    const chartHeight = chartBottom - chartTop;
+                    const barWidth = 28;
+                    const gap = (chartRight - chartLeft) / salesTrend.length;
+
+                    const yTicks = 4;
+                    const yLines = Array.from({ length: yTicks + 1 }, (_, i) => {
+                      const val = (maxVal / yTicks) * i;
+                      const y = chartBottom - (val / maxVal) * chartHeight;
+                      return { val, y };
+                    });
+
+                    return (
+                      <>
+                        {/* Y-axis grid lines + labels */}
+                        {yLines.map((tick, i) => (
+                          <g key={i}>
+                            <line
+                              x1={chartLeft}
+                              y1={tick.y}
+                              x2={chartRight}
+                              y2={tick.y}
+                              stroke="#E6E2D3"
+                              strokeWidth="1"
+                              strokeDasharray={i === 0 ? undefined : "4 6"}
+                            />
+                            <text
+                              x={chartLeft - 8}
+                              y={tick.y}
+                              textAnchor="end"
+                              dominantBaseline="middle"
+                              fill="#5B6A65"
+                              fontSize="10"
+                              fontFamily="Public Sans"
+                              fontWeight="500"
+                            >
+                              {formatCurrency(tick.val)}
+                            </text>
+                          </g>
+                        ))}
+
+                        {/* Bars + value labels + x-axis labels */}
+                        {salesTrend.map((d, i) => {
+                          const x = chartLeft + i * gap + gap / 2;
+                          const barH = (d.total / maxVal) * chartHeight;
+                          const barY = chartBottom - barH;
+                          return (
+                            <g key={i}>
+                              <rect
+                                x={x - barWidth / 2}
+                                y={barY}
+                                width={barWidth}
+                                height={barH}
+                                rx="4"
+                                fill="#1B4B49"
+                                opacity="0.85"
+                              />
+                              <text
+                                x={x}
+                                y={barY - 8}
+                                textAnchor="middle"
+                                fill="#1E2A28"
+                                fontSize="10"
+                                fontFamily="Fraunces"
+                                fontWeight="700"
+                              >
+                                {formatCurrency(d.total)}
+                              </text>
+                              <text
+                                x={x}
+                                y={chartBottom + 16}
+                                textAnchor="middle"
+                                fill="#5B6A65"
+                                fontSize="10"
+                                fontFamily="Public Sans"
+                                fontWeight="500"
+                              >
+                                {formatDateLabel(d.tanggal)}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                </svg>
               </div>
-              <div className="flex w-[260px] flex-col items-end gap-0.5 rounded-xl border border-border bg-card-alt px-4 py-2.5">
-                <span className="text-[11px] font-medium text-muted">Capaian target 7 hari</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-heading text-[18px] font-bold text-teal-success">96%</span>
-                  <span className="rounded-full bg-teal-success-bg px-2 py-0.5 text-[10px] font-bold text-teal-success">Rp 5,42jt / 5,60jt</span>
+
+              {/* Stats row */}
+              {trendStats && (
+                <div className="grid grid-cols-2 gap-3 pt-2 md:grid-cols-4">
+                  <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-card-alt px-3 py-2.5">
+                    <span className="text-[11px] font-medium text-muted">Total periode ini</span>
+                    <span className="font-heading text-[14px] font-bold text-ink">{formatCurrency(trendStats.sum)}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-card-alt px-3 py-2.5">
+                    <span className="text-[11px] font-medium text-muted">Rata-rata / hari</span>
+                    <span className="font-heading text-[14px] font-bold text-ink">{formatCurrency(trendStats.avg)}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-card-alt px-3 py-2.5">
+                    <span className="text-[11px] font-medium text-muted">Hari tertinggi</span>
+                    <span className="font-heading text-[14px] font-bold text-teal-success">
+                      {formatCurrency(trendStats.max)} · {trendStats.maxDay ? formatDateLabel(trendStats.maxDay.tanggal) : ""}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-card-alt px-3 py-2.5">
+                    <span className="text-[11px] font-medium text-muted">Hari terendah</span>
+                    <span className="font-heading text-[14px] font-bold text-muted">
+                      {formatCurrency(trendStats.min)} · {trendStats.minDay ? formatDateLabel(trendStats.minDay.tanggal) : ""}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6 pb-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-[3px] w-6 rounded-full bg-teal-active" />
-              <span className="text-[12px] font-medium text-muted">
-                Aktual
-                <span className="ml-2 font-semibold text-teal-success">+12% vs 7 hari lalu</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-[3px] w-6 rounded-full" style={{ borderStyle: "dashed", borderTopWidth: 3, borderColor: "#B8791E", opacity: 0.8 }} />
-              <span className="text-[12px] font-medium text-muted">Target harian</span>
-            </div>
-          </div>
-
-          <div className="relative w-full">
-            <svg viewBox="0 0 720 260" className="h-[260px] w-full">
-              <defs>
-                <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#2B6E41" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#2B6E41" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              <g>
-                <line x1="56" y1="49.71" x2="696" y2="49.71" stroke="#E6E2D3" strokeWidth="1" strokeDasharray="4 6" />
-                <text x="48" y="49.71" textAnchor="end" dominantBaseline="middle" fill="#5B6A65" fontSize="10" fontFamily="Public Sans" fontWeight="500">1,2jt</text>
-
-                <line x1="56" y1="101.14" x2="696" y2="101.14" stroke="#E6E2D3" strokeWidth="1" strokeDasharray="4 6" />
-                <text x="48" y="101.14" textAnchor="end" dominantBaseline="middle" fill="#5B6A65" fontSize="10" fontFamily="Public Sans" fontWeight="500">800rb</text>
-
-                <line x1="56" y1="152.57" x2="696" y2="152.57" stroke="#E6E2D3" strokeWidth="1" strokeDasharray="4 6" />
-                <text x="48" y="152.57" textAnchor="end" dominantBaseline="middle" fill="#5B6A65" fontSize="10" fontFamily="Public Sans" fontWeight="500">400rb</text>
-
-                <line x1="56" y1="204" x2="696" y2="204" stroke="#E6E2D3" strokeWidth="1" />
-                <text x="48" y="204" textAnchor="end" dominantBaseline="middle" fill="#5B6A65" fontSize="10" fontFamily="Public Sans" fontWeight="500">0</text>
-              </g>
-
-              <path
-                d="M 56 150 C 98.67 139.97, 119.99 118.88, 162.66 116.57 C 205.33 114.26, 226.66 143.83, 269.33 138.43 C 312 133.03, 333.33 95.74, 376 89.57 C 418.67 83.4, 439.99 116.57, 482.66 107.57 C 525.33 98.57, 546.66 49.07, 589.33 44.57 C 632 40.07, 653.33 72.92, 696 85.07 L 696 204 L 56 204 Z"
-                fill="url(#chartFill)"
-              />
-
-              <path
-                d="M 56 139.71 L 162.66 114 L 269.33 126.86 L 376 101.14 L 482.66 88.29 L 589.33 62.57 L 696 75.43"
-                fill="none"
-                stroke="#B8791E"
-                strokeWidth="2"
-                strokeDasharray="6 5"
-                strokeLinecap="round"
-                opacity="0.85"
-              />
-
-              <path
-                d="M 56 150 C 98.67 139.97, 119.99 118.88, 162.66 116.57 C 205.33 114.26, 226.66 143.83, 269.33 138.43 C 312 133.03, 333.33 95.74, 376 89.57 C 418.67 83.4, 439.99 116.57, 482.66 107.57 C 525.33 98.57, 546.66 49.07, 589.33 44.57 C 632 40.07, 653.33 72.92, 696 85.07"
-                fill="none"
-                stroke="#1B4B49"
-                strokeWidth="2.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {[
-                { x: 56, y: 150, v: "420rb" },
-                { x: 162.66, y: 116.57, v: "680rb" },
-                { x: 269.33, y: 138.43, v: "510rb" },
-                { x: 376, y: 89.57, v: "890rb" },
-                { x: 482.66, y: 107.57, v: "750rb" },
-                { x: 589.33, y: 44.57, v: "1,24jt" },
-                { x: 696, y: 85.07, v: "925rb" },
-              ].map((p, i) => (
-                <g key={i}>
-                  <circle cx={p.x} cy={p.y} r="5" fill="#FFFFFF" stroke="#1B4B49" strokeWidth="2.2" />
-                  <circle cx={p.x} cy={p.y} r="2.2" fill="#1B4B49" />
-                  <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#1E2A28" fontSize="10.5" fontFamily="Fraunces" fontWeight="700">{p.v}</text>
-                </g>
-              ))}
-
-              {[
-                { x: 56, t: "30 Agt" },
-                { x: 162.66, t: "31 Agt" },
-                { x: 269.33, t: "1 Sep" },
-                { x: 376, t: "2 Sep" },
-                { x: 482.66, t: "3 Sep" },
-                { x: 589.33, t: "4 Sep" },
-                { x: 696, t: "5 Sep" },
-              ].map((p, i) => (
-                <text key={i} x={p.x} y="236" textAnchor="middle" fill="#5B6A65" fontSize="11" fontFamily="Public Sans" fontWeight="500">{p.t}</text>
-              ))}
-            </svg>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2 md:grid-cols-4">
-            {[
-              { l: "Rata-rata / hari", v: "Rp 774rb", tone: "text-ink" },
-              { l: "Penjualan tertinggi", v: "1,24jt · 4 Sep", tone: "text-teal-success" },
-              { l: "Order terbesar", v: "240rb · Bu Siti", tone: "text-accent" },
-              { l: "Hari ter-sepi", v: "420rb · 30 Agt", tone: "text-muted" },
-            ].map((s) => (
-              <div key={s.l} className="flex flex-col gap-0.5 rounded-xl border border-border bg-card-alt px-3 py-2.5">
-                <span className="text-[11px] font-medium text-muted">{s.l}</span>
-                <span className={`font-heading text-[14px] font-bold ${s.tone}`}>{s.v}</span>
-              </div>
-            ))}
-          </div>
+              )}
+            </>
+          )}
         </Card>
 
         {/* Row: AI/Manual ratio + Recent */}
@@ -502,7 +513,9 @@ export default function DashboardPage() {
                 <h3 className="font-heading text-[20px] font-semibold text-ink">
                   Order Terbaru
                 </h3>
-                <p className="text-[13px] text-muted">4 order terakhir masuk.</p>
+                <p className="text-[13px] text-muted">
+                  {orders.length > 0 ? `${orders.length} order terakhir masuk.` : "Belum ada order."}
+                </p>
               </div>
               <Link
                 href="/data"
@@ -514,44 +527,42 @@ export default function DashboardPage() {
                 </svg>
               </Link>
             </div>
-            <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border">
-              {orders.map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center gap-4 px-4 py-3 hover:bg-card-alt transition-colors"
-                >
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-[14px] font-semibold text-ink">
-                        {o.customer}
-                      </span>
-                      {o.tags.map((t: string) => (
-                        <Badge key={t} variant={t as "ai" | "manual" | "source"}>
-                          {t === "ai" ? "AI" : t === "manual" ? "MANUAL" : o.source}
-                        </Badge>
-                      ))}
+            {orders.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-[13px] text-muted">
+                Belum ada data order dari backend.
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border">
+                {orders.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center gap-4 px-4 py-3 hover:bg-card-alt transition-colors"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-[14px] font-semibold text-ink">
+                          {o.customer}
+                        </span>
+                        {o.tags.map((t: string) => (
+                          <Badge key={t} variant={t as "ai" | "manual" | "source"}>
+                            {t === "ai" ? "AI" : t === "manual" ? "MANUAL" : o.source}
+                          </Badge>
+                        ))}
+                      </div>
+                      <span className="text-[12px] text-muted">{o.date}</span>
                     </div>
-                    <span className="text-[12px] text-muted">{o.date}</span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="font-heading text-[15px] font-bold text-ink">
+                        {o.amount}
+                      </span>
+                      <span className="text-[12px] font-semibold text-teal-success">
+                        {o.source}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-0.5">
-                    <span className="font-heading text-[15px] font-bold text-ink">
-                      {o.amount}
-                    </span>
-                    <span
-                      className={`text-[12px] font-semibold ${
-                        o.status === "Baru"
-                          ? "text-teal-success"
-                          : o.status === "Diproses"
-                          ? "text-accent"
-                          : "text-muted"
-                      }`}
-                    >
-                      {o.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>
