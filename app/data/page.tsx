@@ -138,7 +138,6 @@ function ColumnBuilder({
 
 export default function DataPage() {
   const [jenisList, setJenisList] = useState<any[]>([]);
-  const [accountSuggestions, setAccountSuggestions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("master");
   const [loadingTabs, setLoadingTabs] = useState(true);
   const [tick, setTick] = useState(0);
@@ -159,7 +158,6 @@ export default function DataPage() {
 
   useEffect(() => {
     loadJenisList();
-    api.accounts.getAll().then((res: any) => { if (res.success) setAccountSuggestions(res.data); }).catch(() => {});
   }, [loadJenisList]);
 
   const tabs: ChipOption[] = [
@@ -301,6 +299,16 @@ export default function DataPage() {
     }
   };
 
+  const handleExportTransactions = async (jenisId?: number) => {
+    try {
+      await api.reports.exportTransactions({
+        jenis_transaksi_id: jenisId,
+      });
+    } catch (e: any) {
+      alert(e.message || 'Export gagal');
+    }
+  };
+
   return (
     <AppLayout activeMenu="data">
       <div className="flex flex-col gap-6">
@@ -315,7 +323,7 @@ export default function DataPage() {
                 {selectedJenis && (
                   <Button variant="outline" size="md" onClick={() => setEditJenisTarget(selectedJenis)}>Edit Table</Button>
                 )}
-                <Button variant="secondary" size="md" leftIcon={DownloadIcon}>Export ke Excel</Button>
+                <Button variant="secondary" size="md" leftIcon={DownloadIcon} onClick={() => handleExportTransactions(selectedJenis?.id)}>Export ke Excel</Button>
                 <Button variant="primary" size="md" leftIcon={PlusIcon} onClick={() => openTambahTransaksi(selectedJenis?.id)}>
                   Tambah Transaksi
                 </Button>
@@ -380,7 +388,6 @@ export default function DataPage() {
               placeholder="Contoh: Kas Utama (boleh ketik bebas)"
               value={newJenisForm.jenisAkun}
               onChange={(v) => setNewJenisForm((f) => ({ ...f, jenisAkun: v }))}
-              helper={accountSuggestions.length ? `Saran: ${accountSuggestions.slice(0, 4).map((a: any) => a.namaAkun).join(", ")}...` : undefined}
             />
             <div className="flex flex-col gap-1.5">
               <span className="text-[12px] font-semibold text-muted">Penanda <span className="text-danger">*</span></span>
@@ -456,7 +463,10 @@ function MasterTransaksiFeed({ refreshKey, onOpenJenis }: { refreshKey: number; 
   useEffect(() => {
     setLoading(true);
     api.transactions.getAll().then((res: any) => {
-      if (res.success) setEntries(res.data);
+      if (res.success) {
+        const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+        setEntries(list);
+      }
     }).catch(console.error).finally(() => setLoading(false));
   }, [refreshKey]);
 
@@ -474,7 +484,7 @@ function MasterTransaksiFeed({ refreshKey, onOpenJenis }: { refreshKey: number; 
         <tbody className="divide-y divide-border">
           {loading ? (
             <tr><td colSpan={4} className="px-5 py-8 text-center text-muted">Memuat...</td></tr>
-          ) : entries.length === 0 ? (
+          ) : !Array.isArray(entries) || entries.length === 0 ? (
             <tr><td colSpan={4} className="px-5 py-8 text-center text-muted">Belum ada transaksi. Tambah lewat tombol "Tambah Transaksi" di atas.</td></tr>
           ) : (
             entries.map((e) => (
@@ -501,6 +511,11 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
   const [entries, setEntries] = useState<any[]>([]);
   const [columns, setColumns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editEntry, setEditEntry] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<any>({});
+  const [editCustom, setEditCustom] = useState<Record<string, string>>({});
+  const [editError, setEditError] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -509,8 +524,11 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
         api.transactions.getAll({ jenis_transaksi_id: jenis.id }),
         api.transactionTypes.getColumns(jenis.id),
       ]);
-      if (entriesRes.success) setEntries(entriesRes.data);
-      if (columnsRes.success) setColumns(columnsRes.data);
+      if (entriesRes.success) {
+        const list = Array.isArray(entriesRes.data) ? entriesRes.data : (Array.isArray(entriesRes.data?.data) ? entriesRes.data.data : []);
+        setEntries(list);
+      }
+      if (columnsRes.success) setColumns(columnsRes.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -528,6 +546,45 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
       onChanged();
     } catch (e: any) {
       alert(e.message || "Gagal menghapus entri.");
+    }
+  };
+
+  const openEdit = (entry: any) => {
+    setEditEntry(entry);
+    setEditForm({
+      tanggal: entry.tanggal ? new Date(entry.tanggal).toISOString().split('T')[0] : todayStr(),
+      detail: entry.detail || '',
+      nominal: String(Number(entry.nominal)),
+      debit: entry.debit || '',
+      kredit: entry.kredit || '',
+    });
+    setEditCustom(entry.customData ? { ...entry.customData } : {});
+    setEditError('');
+  };
+
+  const submitEdit = async () => {
+    if (!editForm.nominal || Number(editForm.nominal) <= 0) {
+      setEditError('Nominal wajib diisi dan > 0.');
+      return;
+    }
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      await api.transactions.update(editEntry.id, {
+        tanggal: editForm.tanggal,
+        detail: editForm.detail,
+        nominal: Number(editForm.nominal),
+        debit: editForm.debit || undefined,
+        kredit: editForm.kredit || undefined,
+        custom_data: editCustom,
+      });
+      setEditEntry(null);
+      load();
+      onChanged();
+    } catch (e: any) {
+      setEditError(e.message || 'Gagal menyimpan perubahan.');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -555,7 +612,7 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
             <tr><td colSpan={7 + columns.length} className="px-5 py-8 text-center text-muted">Belum ada entri untuk jenis ini. Tambah lewat tombol "Tambah Transaksi" di atas.</td></tr>
           ) : (
             entries.map((e) => (
-              <tr key={e.id} className="hover:bg-card-alt/40">
+              <tr key={e.id} className="hover:bg-card-alt/40 cursor-pointer" onClick={() => openEdit(e)}>
                 <td className="px-5 py-3 whitespace-nowrap">{fmtTanggal(e.tanggal)}</td>
                 <td className="px-5 py-3">{e.detail || "-"}</td>
                 <td className="px-5 py-3 whitespace-nowrap">{e.namaTransaksi}</td>
@@ -566,7 +623,7 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
                   <td key={c.id} className="px-5 py-3 whitespace-nowrap">{e.customData?.[String(c.id)] ?? "-"}</td>
                 ))}
                 <td className="px-5 py-3">
-                  <button className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-danger-bg hover:text-danger" onClick={() => deleteEntry(e)}>
+                  <button className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-danger-bg hover:text-danger" onClick={(ev) => { ev.stopPropagation(); deleteEntry(e); }}>
                     {TrashIcon}
                   </button>
                 </td>
@@ -575,6 +632,43 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
           )}
         </tbody>
       </table>
+
+      {editEntry && (
+        <Modal
+          open={!!editEntry}
+          onClose={() => setEditEntry(null)}
+          title="Edit Transaksi"
+          subtitle={`Kode: ${editEntry.kode}`}
+          width={480}
+          footer={
+            <>
+              <Button variant="outline" size="md" onClick={() => setEditEntry(null)}>Batal</Button>
+              <Button variant="primary" size="md" onClick={submitEdit} disabled={savingEdit}>
+                {savingEdit ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <InputField label="Tanggal" type="date" value={editForm.tanggal} onChange={(v) => setEditForm((f: any) => ({ ...f, tanggal: v }))} />
+            <InputField label="Keterangan" value={editForm.detail} onChange={(v) => setEditForm((f: any) => ({ ...f, detail: v }))} />
+            <InputField label="Nominal (Rp)" type="number" value={editForm.nominal} onChange={(v) => setEditForm((f: any) => ({ ...f, nominal: v }))} required />
+            <div className="flex gap-3">
+              <InputField label="Debit" className="flex-1" value={editForm.debit} onChange={(v) => setEditForm((f: any) => ({ ...f, debit: v }))} />
+              <InputField label="Kredit" className="flex-1" value={editForm.kredit} onChange={(v) => setEditForm((f: any) => ({ ...f, kredit: v }))} />
+            </div>
+            {columns.map((c) => (
+              <DynamicColumnField
+                key={c.id}
+                kolom={c}
+                value={editCustom[String(c.id)] || ''}
+                onChange={(v) => setEditCustom((prev) => ({ ...prev, [String(c.id)]: v }))}
+              />
+            ))}
+            {editError && <p className="text-[12px] font-medium text-danger">{editError}</p>}
+          </div>
+        </Modal>
+      )}
     </Card>
   );
 }

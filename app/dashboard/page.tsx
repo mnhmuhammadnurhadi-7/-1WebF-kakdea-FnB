@@ -76,6 +76,7 @@ export default function DashboardPage() {
   const [salesTrend, setSalesTrend] = useState<{ tanggal: string; total: number }[]>([]);
   const [periode, setPeriode] = useState<"7d" | "30d">("7d");
   const [productCount, setProductCount] = useState<number | null>(null);
+  const [ppData, setPpData] = useState<{ daily: any[]; totals: { pemasukan: number; pengeluaran: number; laba: number } } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -98,9 +99,9 @@ export default function DashboardPage() {
         if (ordersRes.success) {
           const recent = ordersRes.data.slice(0, 4).map((order: any) => ({
             id: order.id,
-            customer: order.customer?.nama || order.namaPemesan || "Unknown",
-            source: order.jenisOrder,
-            amount: `Rp ${order.totalInvoice.toLocaleString("id-ID")}`,
+            customer: order.detail || order.kode || "Order",
+            source: order.jenisOrder || order.sumberOrder || "-",
+            amount: `Rp ${Number(order.totalInvoice ?? order.nominal ?? 0).toLocaleString("id-ID")}`,
             date: new Date(order.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
             tags: [order.sumberInput === "AI" ? "ai" : "manual"],
           }));
@@ -114,6 +115,12 @@ export default function DashboardPage() {
         if (trendRes.success) {
           setSalesTrend(trendRes.data);
         }
+
+        // Fetch pemasukan vs pengeluaran
+        try {
+          const ppRes = await api.dashboard.getPemasukanPengeluaran(periode);
+          if (ppRes.success) setPpData(ppRes.data);
+        } catch { /* endpoint may not exist yet */ }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -147,24 +154,24 @@ export default function DashboardPage() {
   const displayCards = summaryData
     ? [
         {
-          label: "Total Produk",
-          value: productCount !== null ? String(productCount) : "—",
-          sub: "total aktif",
-          change: "",
-          changeTone: "neutral" as const,
-          icon: PackageIcon,
-          iconBg: "bg-teal-mint",
-          iconColor: "text-teal-active",
+          label: "Total Pemasukan",
+          value: ppData ? formatCurrency(ppData.totals.pemasukan) : "—",
+          sub: "periode ini",
+          change: ppData && ppData.totals.pemasukan > 0 ? `${ppData.daily.length} hari data` : "",
+          changeTone: "success" as const,
+          icon: TrendingUp,
+          iconBg: "bg-teal-success-bg",
+          iconColor: "text-teal-success",
         },
         {
-          label: "Order Baru",
-          value: String(summaryData.order_baru?.total || 0),
-          sub: "order masuk",
-          change: `${Object.keys(summaryData.order_baru?.breakdown || {}).length} jenis`,
-          changeTone: "neutral" as const,
+          label: "Total Pengeluaran",
+          value: ppData ? formatCurrency(ppData.totals.pengeluaran) : "—",
+          sub: "periode ini",
+          change: ppData && ppData.totals.pengeluaran > 0 ? `${ppData.daily.length} hari data` : "",
+          changeTone: "danger" as const,
           icon: CartIcon,
-          iconBg: "bg-accent-bg",
-          iconColor: "text-accent",
+          iconBg: "bg-danger-bg",
+          iconColor: "text-danger",
         },
         {
           label: "Saldo Kas",
@@ -177,14 +184,14 @@ export default function DashboardPage() {
           iconColor: "text-yellow-tag-ink",
         },
         {
-          label: "Hutang Supplier",
-          value: formatCurrency(summaryData.hutang_supplier?.total || 0),
-          sub: summaryData.hutang_supplier?.total > 0 ? "perlu dibayar" : "lancar",
-          change: summaryData.hutang_supplier?.total > 0 ? "perlu perhatian" : "aman",
-          changeTone: summaryData.hutang_supplier?.total > 0 ? ("danger" as const) : ("success" as const),
-          icon: TrendingUp,
-          iconBg: "bg-teal-success-bg",
-          iconColor: "text-teal-success",
+          label: "Laba / Rugi",
+          value: ppData ? formatCurrency(Math.abs(ppData.totals.laba)) : "—",
+          sub: ppData ? (ppData.totals.laba >= 0 ? "laba bersih" : "rugi bersih") : "periode ini",
+          change: ppData ? (ppData.totals.laba >= 0 ? "positif" : "negatif") : "",
+          changeTone: ppData ? (ppData.totals.laba >= 0 ? ("success" as const) : ("danger" as const)) : ("neutral" as const),
+          icon: WalletIcon,
+          iconBg: ppData && ppData.totals.laba >= 0 ? "bg-teal-success-bg" : "bg-danger-bg",
+          iconColor: ppData && ppData.totals.laba >= 0 ? "text-teal-success" : "text-danger",
         },
       ]
     : null;

@@ -13,8 +13,7 @@ const sheetTabs: ChipOption[] = [
   { id: "transaksi", label: "Transaksi" },
   { id: "stok", label: "Stok" },
   { id: "order", label: "Order" },
-  { id: "customer", label: "Customer" },
-  { id: "supplier", label: "Supplier" },
+  { id: "tabel_bebas", label: "Tabel Bebas" },
   { id: "user", label: "User" },
 ];
 
@@ -42,7 +41,7 @@ const DownloadIcon = (
 const ClockIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
+    <polyline points="12 6 12 16 14" />
   </svg>
 );
 
@@ -76,15 +75,14 @@ const SheetIcon = (
   </svg>
 );
 
-type AuditAction = "CREATE" | "UPDATE" | "DELETE";
-type AuditSource = "AI" | "MANUAL";
-type AuditSheet = "transaksi" | "stok" | "order" | "customer" | "supplier" | "user";
+type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "TAMBAH" | "UBAH" | "HAPUS" | string;
+type AuditSource = "AI" | "MANUAL" | string;
 
 interface AuditLog {
   id: string;
   tanggal: string;
   jam: string;
-  sheet: AuditSheet;
+  sheet: string;
   recordLabel: string;
   action: AuditAction;
   source: AuditSource;
@@ -93,17 +91,21 @@ interface AuditLog {
   perubahan?: { field: string; sebelum: string; sesudah: string }[];
 }
 
-const sheetTone: Record<AuditSheet, string> = {
+const sheetTone: Record<string, string> = {
   transaksi: "source",
   stok: "ai",
   order: "manual",
-  customer: "new",
-  supplier: "custom",
+  tabel_bebas: "new",
   user: "custom",
 };
 
-const actionMeta: Record<AuditAction, { label: string; icon: React.ReactNode; tone: string }> = {
+const actionMetaMap: Record<string, { label: string; icon: React.ReactNode; tone: string }> = {
   CREATE: {
+    label: "Tambah",
+    icon: PlusIcon,
+    tone: "bg-teal-success-bg text-teal-success",
+  },
+  TAMBAH: {
     label: "Tambah",
     icon: PlusIcon,
     tone: "bg-teal-success-bg text-teal-success",
@@ -113,12 +115,33 @@ const actionMeta: Record<AuditAction, { label: string; icon: React.ReactNode; to
     icon: EditIcon,
     tone: "bg-yellow-tag-bg text-yellow-tag-ink",
   },
+  UBAH: {
+    label: "Ubah",
+    icon: EditIcon,
+    tone: "bg-yellow-tag-bg text-yellow-tag-ink",
+  },
   DELETE: {
     label: "Hapus",
     icon: TrashIcon,
     tone: "bg-danger-bg text-danger",
   },
+  HAPUS: {
+    label: "Hapus",
+    icon: TrashIcon,
+    tone: "bg-danger-bg text-danger",
+  },
 };
+
+function getActionMeta(action: string) {
+  const key = (action || "").toUpperCase();
+  return (
+    actionMetaMap[key] || {
+      label: action || "Aksi",
+      icon: EditIcon,
+      tone: "bg-card-muted text-muted",
+    }
+  );
+}
 
 export default function AuditPage() {
   const [sheet, setSheet] = useState("semua");
@@ -133,7 +156,7 @@ export default function AuditPage() {
       try {
         setLoading(true);
         const response = await api.auditLog.getAll({
-          sheet: sheet === 'semua' ? undefined : sheet.toUpperCase(),
+          sheet: sheet === 'semua' ? undefined : sheet.toLowerCase(),
           source: source === 'semua' ? undefined : source.toUpperCase(),
           page: 1,
           limit: 50,
@@ -142,15 +165,18 @@ export default function AuditPage() {
         if (response.success && response.data.logs) {
           const formattedLogs = response.data.logs.map((log: any) => ({
             id: String(log.id),
-            tanggal: new Date(log.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
-            jam: new Date(log.createdAt).toLocaleTimeString('id-ID'),
-            sheet: log.sheet.toLowerCase() as AuditSheet,
-            recordLabel: log.recordLabel,
-            action: log.action as AuditAction,
-            source: log.source as AuditSource,
-            actor: log.user?.nama || 'Unknown',
+            tanggal: new Date(log.createdAt || log.dibuatPada).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+            jam: new Date(log.createdAt || log.dibuatPada).toLocaleTimeString('id-ID'),
+            sheet: (log.sheet || log.tabelTarget || 'transaksi').toLowerCase(),
+            recordLabel: log.recordLabel || log.labelRecord || 'Record',
+            action: log.action || log.aksi || 'UBAH',
+            source: log.source || log.sumber || 'MANUAL',
+            actor: log.user?.nama || 'Pengguna',
             detail: log.detail || '',
-            perubahan: log.perubahanJson ? JSON.parse(log.perubahanJson) : undefined,
+            perubahan: log.dataSebelum || log.dataSesudah ? [
+              ...(log.dataSebelum ? [{ field: 'Sebelum', sebelum: log.dataSebelum, sesudah: '' }] : []),
+              ...(log.dataSesudah ? [{ field: 'Sesudah', sebelum: '', sesudah: log.dataSesudah }] : []),
+            ] : undefined,
           }));
           setLogs(formattedLogs);
         }
@@ -165,16 +191,16 @@ export default function AuditPage() {
   }, [sheet, source]);
 
   const filteredLogs = logs.filter((l) => {
-    const sheetOk = sheet === "semua" || l.sheet === sheet;
-    const sourceOk = source === "semua" || l.source === source;
+    const sheetOk = sheet === "semua" || l.sheet.includes(sheet.toLowerCase());
+    const sourceOk = source === "semua" || l.source.toUpperCase() === source.toUpperCase();
     return sheetOk && sourceOk;
   });
 
   const statsRingkasan = [
     { l: "Total Aktivitas (30h)", v: filteredLogs.length, tone: "teal-active", icon: ClockIcon },
-    { l: "Diproses AI", v: filteredLogs.filter((l) => l.source === "AI").length, tone: "teal-active", icon: ClockIcon },
-    { l: "Input Manual", v: filteredLogs.filter((l) => l.source === "MANUAL").length, tone: "accent", icon: ClockIcon },
-    { l: "Perubahan Data", v: filteredLogs.filter((l) => l.action === "UPDATE" || l.action === "DELETE").length, tone: "danger", icon: ClockIcon },
+    { l: "Diproses AI", v: filteredLogs.filter((l) => l.source.toUpperCase() === "AI").length, tone: "teal-active", icon: ClockIcon },
+    { l: "Input Manual", v: filteredLogs.filter((l) => l.source.toUpperCase() === "MANUAL").length, tone: "accent", icon: ClockIcon },
+    { l: "Perubahan Data", v: filteredLogs.filter((l) => ["UPDATE", "DELETE", "UBAH", "HAPUS"].includes(l.action.toUpperCase())).length, tone: "danger", icon: ClockIcon },
   ];
 
   return (
@@ -284,8 +310,9 @@ export default function AuditPage() {
 
                 {filteredLogs.map((l, idx) => {
                   const expanded = expandedId === l.id;
-                  const meta = actionMeta[l.action];
+                  const meta = getActionMeta(l.action);
                   const last = idx === filteredLogs.length - 1;
+                  const sTone = sheetTone[l.sheet] || "source";
                   return (
                     <div
                       key={l.id}
@@ -303,10 +330,10 @@ export default function AuditPage() {
                       <div className="pl-14 flex flex-col gap-3">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant={sheetTone[l.sheet] as any}>
+                            <Badge variant={sTone as any}>
                               {l.sheet.toUpperCase()}
                             </Badge>
-                            <Badge variant={l.source === "AI" ? "ai" : "manual"}>
+                            <Badge variant={l.source.toUpperCase() === "AI" ? "ai" : "manual"}>
                               {l.source}
                             </Badge>
                             <span
@@ -318,119 +345,47 @@ export default function AuditPage() {
                               {l.recordLabel}
                             </span>
                           </div>
-
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex flex-col items-end">
-                              <span className="text-[13px] font-semibold text-ink">
-                                {l.tanggal}
-                              </span>
-                              <span className="text-[11px] text-muted flex items-center gap-1">
-                                {ClockIcon}
-                                {l.jam}
-                              </span>
-                            </div>
-                            <div className="flex flex-col items-end">
-                              <span className="text-[12px] font-semibold text-ink">
-                                {l.actor}
-                              </span>
-                              <span className="text-[11px] text-muted">ID: {l.id}</span>
-                            </div>
+                          <div className="flex items-center gap-3 text-[12px] text-muted">
+                            <span>{l.tanggal} · {l.jam}</span>
+                            <span>oleh <strong className="text-ink font-semibold">{l.actor}</strong></span>
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="flex flex-col gap-1 min-w-0 flex-1">
-                            <p className="text-[14px] text-ink leading-relaxed">
-                              {l.detail}
-                            </p>
-                            {expanded && l.perubahan && l.perubahan.length > 0 && (
-                              <div className="mt-2 rounded-xl border border-border bg-card p-4">
-                                <div className="text-[12px] font-bold text-muted uppercase tracking-wide mb-3">
-                                  Detail Perubahan Field
-                                </div>
-                                <div className="overflow-x-auto">
-                                  <table className="w-full text-[13px]">
-                                    <thead>
-                                      <tr className="text-muted text-[12px]">
-                                        <th className="text-left py-2 pr-4 font-semibold">
-                                          Field
-                                        </th>
-                                        <th className="text-left py-2 pr-4 font-semibold">
-                                          Sebelum
-                                        </th>
-                                        <th className="text-left py-2 font-semibold">
-                                          Sesudah
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                      {l.perubahan.map((p, pi) => (
-                                        <tr key={pi}>
-                                          <td className="py-2.5 pr-4 font-medium text-ink whitespace-nowrap">
-                                            {p.field}
-                                          </td>
-                                          <td className="py-2.5 pr-4">
-                                            <span className="inline-flex items-center rounded-md bg-danger-bg px-2 py-1 text-[12px] font-medium text-danger whitespace-nowrap">
-                                              {p.sebelum}
-                                            </span>
-                                          </td>
-                                          <td className="py-2.5">
-                                            <span className="inline-flex items-center rounded-md bg-teal-success-bg px-2 py-1 text-[12px] font-medium text-teal-success whitespace-nowrap">
-                                              {p.sesudah}
-                                            </span>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
+                        {l.detail && (
+                          <p className="text-[13px] text-muted leading-relaxed">
+                            {l.detail}
+                          </p>
+                        )}
+
+                        {l.perubahan && l.perubahan.length > 0 && (
+                          <div className="flex flex-col gap-2 pt-1">
+                            <button
+                              onClick={() => setExpandedId(expanded ? null : l.id)}
+                              className="self-start text-[12px] font-semibold text-accent hover:underline flex items-center gap-1"
+                            >
+                              {expanded ? "Sembunyikan detail perubahan ▲" : `Lihat ${l.perubahan.length} detail perubahan ▼`}
+                            </button>
+
+                            {expanded && (
+                              <div className="flex flex-col gap-2 rounded-xl border border-border bg-card-alt p-3 text-[12px]">
+                                {l.perubahan.map((p, pIdx) => (
+                                  <div key={pIdx} className="flex flex-wrap items-center gap-2">
+                                    <span className="font-semibold text-ink">{p.field}:</span>
+                                    {p.sebelum && <span className="text-danger line-through">{p.sebelum}</span>}
+                                    {p.sebelum && p.sesudah && <span className="text-muted">➔</span>}
+                                    {p.sesudah && <span className="text-teal-success font-semibold">{p.sesudah}</span>}
+                                  </div>
+                                ))}
                               </div>
                             )}
                           </div>
-
-                          {l.perubahan && l.perubahan.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedId(expanded ? null : l.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold text-accent hover:bg-accent-tag transition-colors shrink-0"
-                            >
-                              {expanded ? "Sembunyikan detail" : `Lihat ${l.perubahan.length} perubahan`}
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${expanded ? "rotate-180" : ""}`}>
-                                <polyline points="6 9 12 15 18 9" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
-
-          {/* Pagination placeholder */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-3.5 bg-card-alt">
-            <span className="text-[12px] text-muted">
-              Menampilkan <b className="text-ink">{filteredLogs.length}</b> dari <b className="text-ink">{logs.length}</b> total catatan audit
-            </span>
-            <div className="flex items-center gap-1.5">
-              <Button variant="outline" size="sm">
-                ‹ Sebelumnya
-              </Button>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] bg-teal-active text-white text-[13px] font-bold">
-                1
-              </span>
-              <Button variant="ghost" size="sm">
-                2
-              </Button>
-              <Button variant="ghost" size="sm">
-                3
-              </Button>
-              <Button variant="outline" size="sm">
-                Berikutnya ›
-              </Button>
-            </div>
           </div>
         </Card>
       </div>

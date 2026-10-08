@@ -97,6 +97,12 @@ export const dashboardApi = {
     if (limit) params.append('limit', limit.toString());
     return apiRequest<{ success: boolean; data: any }>(`/dashboard/aktivitas-terbaru?${params}`);
   },
+
+  getPemasukanPengeluaran: async (periode?: string) => {
+    const params = new URLSearchParams();
+    if (periode) params.append('periode', periode);
+    return apiRequest<{ success: boolean; data: any }>(`/dashboard/pemasukan-pengeluaran?${params}`);
+  },
 };
 
 // Products API
@@ -133,73 +139,6 @@ export const productsApi = {
   },
 };
 
-// Customers API
-export const customersApi = {
-  getAll: async (search?: string, status?: string) => {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (status) params.append('status', status);
-    return apiRequest<{ success: boolean; data: any }>(`/customers?${params}`);
-  },
-
-  getById: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/customers/${id}`);
-  },
-
-  create: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/customers', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  update: async (id: number, data: any) => {
-    return apiRequest<{ success: boolean; data: any }>(`/customers/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  delete: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/customers/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// Suppliers API
-export const suppliersApi = {
-  getAll: async (search?: string) => {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    return apiRequest<{ success: boolean; data: any }>(`/suppliers?${params}`);
-  },
-
-  getById: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/suppliers/${id}`);
-  },
-
-  create: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/suppliers', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  update: async (id: number, data: any) => {
-    return apiRequest<{ success: boolean; data: any }>(`/suppliers/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  delete: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/suppliers/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
 // Transactions API (Entri Transaksi - generic, terikat ke JenisTransaksi)
 export const transactionsApi = {
   getAll: async (filters?: { business_unit?: string; jenis_transaksi_id?: number; tanggal_mulai?: string; tanggal_selesai?: string; search?: string }) => {
@@ -216,12 +155,18 @@ export const transactionsApi = {
     return apiRequest<{ success: boolean; data: any }>(`/transactions/${id}`);
   },
 
-  // Endpoint generic utama - dipakai form "Tambah Transaksi".
   // data: { tanggal, jenis_transaksi_id, detail (keterangan), nominal,
   //   debit?, kredit? (teks bebas, opsional), custom_data: {kolomId: value} }
   create: async (data: any) => {
     return apiRequest<{ success: boolean; data: any }>('/transactions', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: number, data: any) => {
+    return apiRequest<{ success: boolean; data: any }>(`/transactions/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },
@@ -233,31 +178,12 @@ export const transactionsApi = {
   },
 };
 
-// Stock API
-export const stockApi = {
-  getAll: async () => {
-    return apiRequest<{ success: boolean; data: any }>('/stock');
-  },
-
-  getMovements: async (productId: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/stock/${productId}/movements`);
-  },
-
-  createMovement: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/stock/movements', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-};
-
-// Orders API
+// Orders API (subset transaksi bertipe order — dipakai dashboard)
 export const ordersApi = {
-  getAll: async (filters?: { business_unit?: string; jenis_order?: string; customer_id?: number; tanggal_mulai?: string; tanggal_selesai?: string }) => {
+  getAll: async (filters?: { business_unit?: string; jenis_order?: string; tanggal_mulai?: string; tanggal_selesai?: string }) => {
     const params = new URLSearchParams();
     if (filters?.business_unit) params.append('business_unit', filters.business_unit);
     if (filters?.jenis_order) params.append('jenis_order', filters.jenis_order);
-    if (filters?.customer_id) params.append('customer_id', filters.customer_id.toString());
     if (filters?.tanggal_mulai) params.append('tanggal_mulai', filters.tanggal_mulai);
     if (filters?.tanggal_selesai) params.append('tanggal_selesai', filters.tanggal_selesai);
     return apiRequest<{ success: boolean; data: any }>(`/orders?${params}`);
@@ -265,33 +191,6 @@ export const ordersApi = {
 
   getById: async (id: number) => {
     return apiRequest<{ success: boolean; data: any }>(`/orders/${id}`);
-  },
-
-  create: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/orders', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  update: async (id: number, data: any) => {
-    return apiRequest<{ success: boolean; data: any }>(`/orders/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  delete: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/orders/${id}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// Accounts API
-export const accountsApi = {
-  getAll: async () => {
-    return apiRequest<{ success: boolean; data: any }>('/accounts');
   },
 };
 
@@ -429,31 +328,6 @@ export const freeTablesApi = {
   },
 };
 
-// Debts API
-export const debtsApi = {
-  getAll: async () => {
-    return apiRequest<{ success: boolean; data: any }>('/debts');
-  },
-
-  getPayments: async (debtId: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/debts/${debtId}/payments`);
-  },
-
-  create: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/debts', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  createPayment: async (debtId: number, data: any) => {
-    return apiRequest<{ success: boolean; data: any }>(`/debts/${debtId}/payments`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-};
-
 // Reports API
 export const reportsApi = {
   getBalanceSheet: async (tanggal?: string, business_unit?: string) => {
@@ -477,6 +351,38 @@ export const reportsApi = {
     if (business_unit) params.append('business_unit', business_unit);
     return apiRequest<{ success: boolean; data: any }>(`/reports/perubahan-modal?${params}`);
   },
+
+  exportTransactions: async (filters?: { jenis_transaksi_id?: number; tanggal_mulai?: string; tanggal_selesai?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.jenis_transaksi_id) params.append('jenis_transaksi_id', filters.jenis_transaksi_id.toString());
+    if (filters?.tanggal_mulai) params.append('tanggal_mulai', filters.tanggal_mulai);
+    if (filters?.tanggal_selesai) params.append('tanggal_selesai', filters.tanggal_selesai);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const url = `${API_BASE_URL}/reports/export/transactions?${params}`;
+    const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!response.ok) throw new Error('Export gagal');
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transaksi_${Date.now()}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
+  exportFreeTable: async (tableId: number) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const url = `${API_BASE_URL}/reports/export/free-table/${tableId}`;
+    const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!response.ok) throw new Error('Export gagal');
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `tabel_${Date.now()}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
 };
 
 // Audit Log API - default backend 7 hari terakhir, kirim days untuk ubah
@@ -494,42 +400,15 @@ export const auditLogApi = {
   },
 };
 
-// Partner Stores API
-export const partnerStoresApi = {
-  getAll: async () => {
-    return apiRequest<{ success: boolean; data: any }>('/partner-stores');
-  },
-
-  create: async (data: any) => {
-    return apiRequest<{ success: boolean; data: any }>('/partner-stores', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  createCheck: async (id: number, data: any) => {
-    return apiRequest<{ success: boolean; data: any }>(`/partner-stores/${id}/checks`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-};
-
 // Export all APIs
 export const api = {
   auth: authApi,
   dashboard: dashboardApi,
   products: productsApi,
-  customers: customersApi,
-  suppliers: suppliersApi,
   transactions: transactionsApi,
-  stock: stockApi,
   orders: ordersApi,
-  accounts: accountsApi,
   transactionTypes: transactionTypesApi,
-  debts: debtsApi,
   reports: reportsApi,
   auditLog: auditLogApi,
-  partnerStores: partnerStoresApi,
   freeTables: freeTablesApi,
 };
