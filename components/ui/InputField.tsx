@@ -1,6 +1,6 @@
 import React from "react";
 
-type InputType = "text" | "number" | "date" | "select" | "textarea";
+type InputType = "text" | "email" | "password" | "number" | "date" | "select" | "textarea";
 
 interface Option {
   value: string;
@@ -19,6 +19,7 @@ interface InputFieldProps {
   helper?: string;
   className?: string;
   id?: string;
+  disabled?: boolean;
 }
 
 export function InputField({
@@ -33,6 +34,7 @@ export function InputField({
   helper,
   className = "",
   id,
+  disabled = false,
 }: InputFieldProps) {
   const inputId = id || `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
 
@@ -41,6 +43,7 @@ export function InputField({
     text-[14px] text-ink placeholder:text-muted-light
     focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20
     transition-colors
+    ${disabled ? "opacity-50 cursor-not-allowed" : ""}
   `;
 
   const errorClass = error
@@ -62,6 +65,7 @@ export function InputField({
           id={inputId}
           value={value || ""}
           onChange={(e) => onChange?.(e.target.value)}
+          disabled={disabled}
           className={`${baseInputClass} ${errorClass} appearance-none pr-10 bg-[length:16px_16px] bg-no-repeat bg-[right_12px_center]`}
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235B6A65' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
@@ -83,6 +87,7 @@ export function InputField({
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
           rows={3}
+          disabled={disabled}
           className={`${baseInputClass} ${errorClass} resize-y min-h-[96px]`}
         />
       ) : (
@@ -92,6 +97,7 @@ export function InputField({
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
+          disabled={disabled}
           className={`${baseInputClass} ${errorClass}`}
         />
       )}

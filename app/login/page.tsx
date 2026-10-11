@@ -94,6 +94,15 @@ export default function LoginPage() {
             <p>Password: password123</p>
           </div>
         </form>
+        <div className="text-center mt-4">
+          <button
+            type="button"
+            onClick={() => router.push("/customer")}
+            className="text-sm text-indigo-600 hover:text-indigo-500"
+          >
+            ← Kembali ke Halaman Customer
+          </button>
+        </div>
       </div>
     </div>
   );

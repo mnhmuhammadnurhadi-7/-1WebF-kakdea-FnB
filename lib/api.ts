@@ -139,6 +139,24 @@ export const productsApi = {
   },
 };
 
+// Public Products API (untuk customer page - tanpa auth)
+export const publicProductsApi = {
+  getAll: async (search?: string) => {
+    const baseUrl = API_BASE_URL.replace('/api/v1', '/api/public');
+    const url = search ? `${baseUrl}/products?search=${encodeURIComponent(search)}` : `${baseUrl}/products`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    return response.json();
+  },
+
+  getById: async (id: number) => {
+    const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/products/${id}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch product');
+    return response.json();
+  },
+};
+
 // Transactions API (Entri Transaksi - generic, terikat ke JenisTransaksi)
 export const transactionsApi = {
   getAll: async (filters?: { business_unit?: string; jenis_transaksi_id?: number; tanggal_mulai?: string; tanggal_selesai?: string; search?: string }) => {
@@ -400,6 +418,104 @@ export const auditLogApi = {
   },
 };
 
+// CMS API (Admin - full CRUD)
+export const cmsApi = {
+  // Content CRUD
+  getContent: async (key?: string) => {
+    const params = key ? `?key=${key}` : '';
+    return apiRequest<{ success: boolean; data: any }>(`/cms/content${params}`);
+  },
+
+  getContentByKey: async (key: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/cms/content/${key}`);
+  },
+
+  createContent: async (data: { key: string; judul: string; subJudul?: string; konten?: string; aktif?: boolean }) => {
+    return apiRequest<{ success: boolean; data: any }>('/cms/content', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateContent: async (key: string, data: { judul?: string; subJudul?: string; konten?: string; aktif?: boolean }) => {
+    return apiRequest<{ success: boolean; data: any }>(`/cms/content/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteContent: async (key: string) => {
+    return apiRequest<{ success: boolean; data: any }>(`/cms/content/${key}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Menu CRUD
+  getMenu: async () => {
+    return apiRequest<{ success: boolean; data: any }>('/cms/menu');
+  },
+
+  getMenuById: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`);
+  },
+
+  createMenu: async (data: { label: string; path: string; urutan?: number; aktif?: boolean }) => {
+    return apiRequest<{ success: boolean; data: any }>('/cms/menu', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateMenu: async (id: number, data: { label?: string; path?: string; urutan?: number; aktif?: boolean }) => {
+    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteMenu: async (id: number) => {
+    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Public CMS API (untuk customer page - tanpa auth)
+export const publicCmsApi = {
+  getContent: async (key?: string) => {
+    const params = key ? `?key=${key}` : '';
+    const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/cms/content${params}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch public content');
+    return response.json();
+  },
+
+  getContentByKey: async (key: string) => {
+    const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/cms/content/${key}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch public content');
+    return response.json();
+  },
+
+  getMenu: async () => {
+    const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/cms/menu`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch public menu');
+    return response.json();
+  },
+};
+
+// Helper to resolve image URL correctly
+export function getImageUrl(path?: string | null): string {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api/v1';
+  const origin = apiBase.replace(/\/api\/v1\/?$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${origin}${cleanPath}`;
+}
+
 // Export all APIs
 export const api = {
   auth: authApi,
@@ -411,4 +527,8 @@ export const api = {
   reports: reportsApi,
   auditLog: auditLogApi,
   freeTables: freeTablesApi,
+  cms: cmsApi,
+  publicCms: publicCmsApi,
+  publicProducts: publicProductsApi,
+  getImageUrl,
 };
