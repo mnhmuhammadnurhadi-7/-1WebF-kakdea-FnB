@@ -40,34 +40,30 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="modal-backdrop-enter fixed inset-0 z-50 flex items-end justify-center bg-ink/50 backdrop-blur-[1px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
     >
+      <div onClick={onClose} aria-hidden="true" className="absolute inset-0" />
       <div
-        className="absolute inset-0 bg-ink/50 backdrop-blur-[1px]"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div
-        className="relative z-10 flex max-h-[90vh] w-full flex-col bg-card shadow-card-hover"
+        className="modal-surface relative z-10 flex max-h-[min(92dvh,48rem)] w-full flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-card-hover sm:rounded-3xl"
+        aria-labelledby={title ? "modal-title" : undefined}
+        aria-describedby={subtitle ? "modal-subtitle" : undefined}
         style={{
           width: `100%`,
           maxWidth: `${width}px`,
-          borderRadius: "20px",
-          border: "1px solid var(--color-border)",
         }}
       >
         {(title || subtitle) && (
-          <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
+          <div className="flex items-start justify-between gap-4 px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
             <div className="flex flex-col gap-1">
               {title && (
-                <h2 className="font-heading text-[22px] font-semibold text-ink">
+                <h2 id="modal-title" className="font-heading text-[22px] font-semibold text-ink">
                   {title}
                 </h2>
               )}
               {subtitle && (
-                <p className="text-[13px] text-muted">{subtitle}</p>
+                <p id="modal-subtitle" className="text-[13px] text-muted">{subtitle}</p>
               )}
             </div>
             <button
@@ -93,10 +89,10 @@ export function Modal({
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">{children}</div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-4 sm:px-6">
             {footer}
           </div>
         )}

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 const SearchIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -77,6 +78,7 @@ export default function DashboardPage() {
   const [periode, setPeriode] = useState<"7d" | "30d">("7d");
   const [productCount, setProductCount] = useState<number | null>(null);
   const [ppData, setPpData] = useState<{ daily: any[]; totals: { pemasukan: number; pengeluaran: number; laba: number } } | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -123,6 +125,7 @@ export default function DashboardPage() {
         } catch { /* endpoint may not exist yet */ }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -199,8 +202,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <AppLayout activeMenu="dashboard">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted">Loading dashboard data...</div>
+        <div aria-label="Memuat dashboard" className="mx-auto max-w-6xl space-y-5 py-4">
+          <div className="skeleton-shimmer h-8 w-52 rounded-lg" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[1,2,3,4].map((n) => <div key={n} className="skeleton-shimmer h-32 rounded-2xl border border-border" />)}</div>
+          <div className="skeleton-shimmer h-72 rounded-2xl border border-border" />
         </div>
       </AppLayout>
     );
@@ -208,6 +213,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout activeMenu="dashboard">
+      {loadError ? <ErrorState title="Dashboard belum berhasil dimuat" description="Data belum dapat diambil. Periksa koneksi atau sesi masuk Anda, lalu muat ulang." onRetry={() => window.location.reload()} /> :
       <div className="flex flex-col gap-8">
         {/* Page Header */}
         <div className="flex items-start justify-between gap-4 pb-4">
@@ -572,7 +578,7 @@ export default function DashboardPage() {
             )}
           </Card>
         </div>
-      </div>
+      </div>}
     </AppLayout>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useContactInfo } from "@/lib/whatsapp";
 
 const MenuIcon = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <line x1="4" x2="20" y1="12" y2="12" />
     <line x1="4" x2="20" y1="6" y2="6" />
     <line x1="4" x2="20" y1="18" y2="18" />
@@ -13,142 +14,150 @@ const MenuIcon = (
 );
 
 const CloseIcon = (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
   </svg>
 );
 
-interface CustomerLayoutProps {
-  children: React.ReactNode;
-}
+const NAV = [
+  { href: "/customer", label: "Home" },
+  { href: "/customer/menu", label: "Menu" },
+  { href: "/customer/tentang", label: "About" },
+  { href: "/customer/kontak", label: "Contact" },
+];
 
-export default function CustomerLayout({ children }: CustomerLayoutProps) {
+export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const contact = useContactInfo();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Tutup menu mobile setiap pindah halaman
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#FAF8FF", fontFamily: "var(--font-plus-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif" }}>
-      {/* Header - Figma: rgba(0, 35, 111, 0.9) with backdrop blur */}
+    <div
+      className="customer-root min-h-screen"
+      style={{ backgroundColor: "#FAF8FF", fontFamily: "var(--font-plus-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif" }}
+    >
+      <a
+        href="#konten"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-[14px] focus:font-semibold"
+        style={{ color: "#00236F" }}
+      >
+        Lewati ke konten
+      </a>
+
       <header
-        className="sticky top-0 z-50"
+        className="c-header sticky top-0 z-50"
         style={{
-          backgroundColor: "rgba(0, 35, 111, 0.9)",
+          backgroundColor: "rgba(0, 35, 111, 0.94)",
           backdropFilter: "blur(12px)",
-          boxShadow: "0px 1px 8px 0px rgba(0, 0, 0, 0.04)",
+          WebkitBackdropFilter: "blur(12px)",
+          boxShadow: scrolled ? "0px 6px 24px -8px rgba(0, 20, 64, 0.35)" : "0px 1px 0px 0px rgba(255, 255, 255, 0.06)",
         }}
       >
-        <div className="max-w-[1280px] mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Link href="/customer" className="flex items-center gap-4">
-              <div className="flex flex-col">
-                <span
-                  className="text-[18px] font-semibold text-white leading-tight"
-                  style={{ letterSpacing: "-0.025em" }}
-                >
-                  SOJU
-                </span>
-                <span
-                  className="text-[11px] font-semibold text-white uppercase"
-                  style={{ letterSpacing: "0.05em" }}
-                >
-                  KULINER & FROZEN FOOD
-                </span>
-              </div>
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-6">
+          <div className="flex h-[72px] items-center justify-between">
+            <Link href="/customer" className="flex flex-col rounded-md" aria-label="SOJU, ke beranda">
+              <span className="text-[19px] font-bold leading-tight text-white" style={{ letterSpacing: "-0.025em" }}>
+                SOJU
+              </span>
+              <span className="text-[10.5px] font-semibold uppercase text-white/80" style={{ letterSpacing: "0.06em" }}>
+                Kuliner &amp; Frozen Food
+              </span>
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              <CustomerNavLink href="/customer" label="Home" activePath="/customer" currentPath={pathname} />
-              <CustomerNavLink href="/customer/menu" label="Menu" activePath="/customer/menu" currentPath={pathname} />
-              <CustomerNavLink href="/customer/tentang" label="About" activePath="/customer/tentang" currentPath={pathname} />
-              <CustomerNavLink href="/customer/kontak" label="Contact" activePath="/customer/kontak" currentPath={pathname} />
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Navigasi utama">
+              {NAV.map((n) => (
+                <CustomerNavLink key={n.href} {...n} currentPath={pathname} />
+              ))}
             </nav>
 
-            {/* Mobile Menu Button */}
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+              type="button"
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="menu-mobile"
+              aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
+              className="c-press -mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-white md:hidden"
             >
               {mobileMenuOpen ? CloseIcon : MenuIcon}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/10" style={{ backgroundColor: "rgba(0, 35, 111, 0.95)" }}>
-            <nav className="flex flex-col px-6 py-3 gap-1">
-              <CustomerNavLink href="/customer" label="Home" activePath="/customer" currentPath={pathname} onClick={() => setMobileMenuOpen(false)} />
-              <CustomerNavLink href="/customer/menu" label="Menu" activePath="/customer/menu" currentPath={pathname} onClick={() => setMobileMenuOpen(false)} />
-              <CustomerNavLink href="/customer/tentang" label="About" activePath="/customer/tentang" currentPath={pathname} onClick={() => setMobileMenuOpen(false)} />
-              <CustomerNavLink href="/customer/kontak" label="Contact" activePath="/customer/kontak" currentPath={pathname} onClick={() => setMobileMenuOpen(false)} />
+        <div id="menu-mobile" className="c-mobile-nav md:hidden" data-open={mobileMenuOpen} aria-hidden={!mobileMenuOpen}>
+          <div>
+            <nav className="flex flex-col gap-1 border-t border-white/10 px-5 py-3" aria-label="Navigasi seluler">
+              {NAV.map((n) => (
+                <CustomerNavLink key={n.href} {...n} currentPath={pathname} tabbable={mobileMenuOpen} block />
+              ))}
             </nav>
           </div>
-        )}
+        </div>
       </header>
 
-      {/* Page Content */}
-      <main>{children}</main>
+      <main id="konten">{children}</main>
 
-      {/* Footer - Figma: #F2F3FF background */}
-      <footer style={{ backgroundColor: "#F2F3FF" }} className="py-8 px-6">
-        <div className="max-w-[1280px] mx-auto">
-          <div className="flex flex-col gap-8">
-            {/* Footer Top */}
-            <div className="flex flex-col md:flex-row items-start justify-center gap-5">
-              {/* Brand Column */}
-              <div className="flex-1">
-                <div className="flex flex-col mb-4">
-                  <span className="text-[18px] font-semibold leading-tight" style={{ color: "#00236F", letterSpacing: "-0.025em" }}>
-                    SOJU
-                  </span>
-                  <span className="text-[11px] font-semibold uppercase" style={{ color: "#00236F", letterSpacing: "0.05em" }}>
-                    KULINER & FROZEN FOOD
-                  </span>
-                </div>
-                <p className="text-[14px] leading-[20px] max-w-xs" style={{ color: "#444651" }}>
-                  Sajian kuliner nusantara siap santap dan produk beku berstandar HACCP.
-                </p>
+      <footer style={{ backgroundColor: "#F2F3FF" }} className="px-5 pb-8 pt-12 sm:px-6">
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-10">
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.4fr_1fr_1.2fr]">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col">
+                <span className="text-[19px] font-bold leading-tight" style={{ color: "#00236F", letterSpacing: "-0.025em" }}>
+                  SOJU
+                </span>
+                <span className="text-[10.5px] font-semibold uppercase" style={{ color: "#00236F", letterSpacing: "0.06em" }}>
+                  Kuliner &amp; Frozen Food
+                </span>
               </div>
+              <p className="max-w-xs text-[14px] leading-[22px]" style={{ color: "#444651" }}>
+                Sajian kuliner nusantara siap santap dan produk beku berstandar HACCP.
+              </p>
+            </div>
 
-              {/* Nav Column */}
-              <div className="flex-1">
-                <h4 className="text-[13px] font-bold uppercase mb-3" style={{ color: "#00236F", letterSpacing: "0.05em" }}>
-                  Navigasi
-                </h4>
-                <div className="flex flex-col gap-2">
-                  <Link href="/customer" className="text-[14px] hover:underline" style={{ color: "#444651" }}>Home</Link>
-                  <Link href="/customer/menu" className="text-[14px] hover:underline" style={{ color: "#444651" }}>Menu</Link>
-                  <Link href="/customer/tentang" className="text-[14px] hover:underline" style={{ color: "#444651" }}>About</Link>
-                  <Link href="/customer/kontak" className="text-[14px] hover:underline" style={{ color: "#444651" }}>Contact</Link>
-                </div>
-              </div>
-
-              {/* Contact Column */}
-              <div className="flex-1">
-                <h4 className="text-[13px] font-bold uppercase mb-3" style={{ color: "#00236F", letterSpacing: "0.05em" }}>
-                  Kontak
-                </h4>
-                <p className="text-[14px]" style={{ color: "#444651" }}>
-                  Hubungi kami via WhatsApp untuk pemesanan
-                </p>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-[14px] font-bold" style={{ color: "#00236F" }}>
+                Navigasi
+              </h4>
+              <div className="flex flex-col gap-2">
+                {NAV.map((n) => (
+                  <Link key={n.href} href={n.href} className="w-fit text-[14px] underline-offset-4 hover:underline" style={{ color: "#444651" }}>
+                    {n.label}
+                  </Link>
+                ))}
               </div>
             </div>
 
-            {/* Footer Bottom */}
-            <div
-              className="flex items-center justify-between p-4 rounded-xl"
-              style={{ backgroundColor: "#FFFFFF", boxShadow: "0px 1px 3px 0px rgba(15, 23, 42, 0.04)" }}
-            >
-              <span className="text-[13px]" style={{ color: "#757682" }}>
-                © 2024 SOJU Corp. All rights reserved.
-              </span>
-              <span className="text-[13px]" style={{ color: "#757682" }}>
-                Powered by SOJU
-              </span>
+            <div className="flex flex-col gap-3">
+              <h4 className="text-[14px] font-bold" style={{ color: "#00236F" }}>
+                Kontak
+              </h4>
+              <div className="flex flex-col gap-2 text-[14px]" style={{ color: "#444651" }}>
+                <a href={`https://wa.me/${contact.waNumber}`} target="_blank" rel="noopener noreferrer" className="w-fit underline-offset-4 hover:underline">
+                  {contact.telepon} (WhatsApp)
+                </a>
+                <a href={`mailto:${contact.email}`} className="w-fit underline-offset-4 hover:underline">
+                  {contact.email}
+                </a>
+                <p className="whitespace-pre-line leading-[22px]">{contact.alamat}</p>
+              </div>
             </div>
+          </div>
+
+          <div className="border-t pt-6 text-[13px]" style={{ borderColor: "#DAE2FD", color: "#757682" }}>
+            © {new Date().getFullYear()} SOJU Corp. Seluruh hak dilindungi.
           </div>
         </div>
       </footer>
@@ -159,24 +168,23 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
 interface CustomerNavLinkProps {
   href: string;
   label: string;
-  activePath: string;
   currentPath: string;
-  onClick?: () => void;
+  block?: boolean;
+  tabbable?: boolean;
 }
 
-function CustomerNavLink({ href, label, activePath, currentPath, onClick }: CustomerNavLinkProps) {
-  const isActive = currentPath === activePath;
+function CustomerNavLink({ href, label, currentPath, block, tabbable = true }: CustomerNavLinkProps) {
+  const isActive = currentPath === href;
 
   return (
     <Link
       href={href}
-      onClick={onClick}
-      className="px-4 py-2 rounded-lg text-[14px] transition-colors"
-      style={{
-        backgroundColor: isActive ? "#0244FF" : "transparent",
-        color: "#FFFFFF",
-        fontWeight: isActive ? 400 : 600,
-      }}
+      tabIndex={tabbable ? undefined : -1}
+      aria-current={isActive ? "page" : undefined}
+      className={`${block ? "flex" : "inline-flex"} items-center rounded-lg px-4 py-2.5 text-[14px] font-semibold text-white transition-[background-color,opacity] duration-200 ease-out ${
+        isActive ? "" : "opacity-85 hover:bg-white/10 hover:opacity-100"
+      }`}
+      style={{ backgroundColor: isActive ? "#0244FF" : undefined }}
     >
       {label}
     </Link>

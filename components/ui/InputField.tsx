@@ -37,6 +37,7 @@ export function InputField({
   disabled = false,
 }: InputFieldProps) {
   const inputId = id || `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
+  const messageId = `${inputId}-message`;
 
   const baseInputClass = `
     w-full rounded-[10px] border border-border bg-card px-4 py-3
@@ -63,6 +64,9 @@ export function InputField({
       {type === "select" ? (
         <select
           id={inputId}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || helper ? messageId : undefined}
           value={value || ""}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
@@ -83,6 +87,9 @@ export function InputField({
       ) : type === "textarea" ? (
         <textarea
           id={inputId}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || helper ? messageId : undefined}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
@@ -94,6 +101,10 @@ export function InputField({
         <input
           id={inputId}
           type={type}
+          required={required}
+          min={type === "number" ? 0 : undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || helper ? messageId : undefined}
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
@@ -103,9 +114,9 @@ export function InputField({
       )}
 
       {error ? (
-        <p className="text-[12px] font-medium text-danger">{error}</p>
+        <p id={messageId} role="alert" className="text-[12px] font-medium text-danger">{error}</p>
       ) : helper ? (
-        <p className="text-[12px] text-muted-light">{helper}</p>
+        <p id={messageId} className="text-[12px] text-muted-light">{helper}</p>
       ) : null}
     </div>
   );

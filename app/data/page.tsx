@@ -9,6 +9,7 @@ import { ChipSelector, type ChipOption } from "@/components/ui/ChipSelector";
 import { InputField } from "@/components/ui/InputField";
 import { Modal } from "@/components/ui/Modal";
 import { api } from "@/lib/api";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 const PlusIcon = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -140,6 +141,7 @@ export default function DataPage() {
   const [jenisList, setJenisList] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("master");
   const [loadingTabs, setLoadingTabs] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((k) => k + 1);
 
@@ -148,9 +150,13 @@ export default function DataPage() {
   const loadJenisList = useCallback(async () => {
     try {
       const res = await api.transactionTypes.getAll();
-      if (res.success) setJenisList(res.data);
+      if (res.success) {
+        setJenisList(res.data);
+        setLoadError(false);
+      }
     } catch (e) {
       console.error(e);
+      setLoadError(true);
     } finally {
       setLoadingTabs(false);
     }
@@ -311,6 +317,7 @@ export default function DataPage() {
 
   return (
     <AppLayout activeMenu="data">
+      {loadError && <div className="mb-6"><ErrorState title="Jenis transaksi belum berhasil dimuat" description="Periksa koneksi atau sesi masuk Anda. Data sebelumnya tetap aman." onRetry={loadJenisList} /></div>}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-4">

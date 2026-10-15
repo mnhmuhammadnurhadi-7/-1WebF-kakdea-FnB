@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ChipSelector, type ChipOption } from "@/components/ui/ChipSelector";
 import { api } from "@/lib/api";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 const sheetTabs: ChipOption[] = [
   { id: "semua", label: "Semua" },
@@ -149,6 +150,8 @@ export default function AuditPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Fetch audit logs on mount and when filters change
   useEffect(() => {
@@ -179,16 +182,18 @@ export default function AuditPage() {
             ] : undefined,
           }));
           setLogs(formattedLogs);
+          setLoadError(false);
         }
       } catch (error) {
         console.error('Error fetching audit logs:', error);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
     }
 
     fetchAuditLogs();
-  }, [sheet, source]);
+  }, [sheet, source, reloadKey]);
 
   const filteredLogs = logs.filter((l) => {
     const sheetOk = sheet === "semua" || l.sheet.includes(sheet.toLowerCase());
@@ -278,7 +283,9 @@ export default function AuditPage() {
         {/* Audit Timeline */}
         <Card className="p-0 overflow-hidden" padding="none">
           <div className="flex flex-col">
-            {loading ? (
+            {loadError ? (
+              <div className="p-5 sm:p-8"><ErrorState title="Riwayat belum berhasil dimuat" description="Periksa koneksi atau sesi masuk Anda. Catatan audit tidak dihapus; silakan coba lagi." onRetry={() => setReloadKey((n) => n + 1)} /></div>
+            ) : loading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-card-muted text-muted">
                   {ClockIcon}

@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { InputField } from "@/components/ui/InputField";
 import { Modal } from "@/components/ui/Modal";
 import { api, getImageUrl } from "@/lib/api";
+import { parseVarian, serializeVarian } from "@/lib/whatsapp";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Notice } from "@/components/ui/Notice";
 
 const PlusIcon = (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -39,6 +42,9 @@ const StarIcon = ({ filled }: { filled: boolean }) => (
   </svg>
 );
 
+/** Batas harga mengikuti kolom database (DECIMAL 15,2 → maksimal 13 digit sebelum koma). */
+const MAX_HARGA = 9_999_999_999_999;
+
 export default function CMSPage() {
   const [activeTab, setActiveTab] = useState<"content" | "menu">("content");
   const [headlineContent, setHeadlineContent] = useState<any>(null);
@@ -47,6 +53,8 @@ export default function CMSPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [starredIds, setStarredIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [notice, setNotice] = useState("");
 
   // Headline modal
   const [headlineModalOpen, setHeadlineModalOpen] = useState(false);
@@ -66,9 +74,13 @@ export default function CMSPage() {
   // Product modal
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
-  const [productForm, setProductForm] = useState({ namaBarang: "", hargaDefault: "", gambar: "", deskripsi: "" });
+  const [productForm, setProductForm] = useState<{ namaBarang: string; hargaDefault: string; gambar: string; deskripsi: string; varian: string[] }>({ namaBarang: "", hargaDefault: "", gambar: "", deskripsi: "", varian: [] });
+  const [varianDraft, setVarianDraft] = useState("");
   const [savingProduct, setSavingProduct] = useState(false);
+  const [productError, setProductError] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const priceTooHigh = Number(productForm.hargaDefault) > MAX_HARGA;
 
   const loadData = async () => {
     try {
@@ -83,22 +95,41 @@ export default function CMSPage() {
       if (aboutRes?.success) setAboutContent(aboutRes.data);
       if (contactRes?.success) setContactContent(contactRes.data);
       if (productsRes.success) setProducts(productsRes.data);
+      setLoadError(false);
 
       if (featuredRes?.success && featuredRes.data?.konten) {
+        let ids: number[] = [];
         try {
           const parsed = JSON.parse(featuredRes.data.konten);
-          if (Array.isArray(parsed)) setStarredIds(parsed);
+          if (Array.isArray(parsed)) ids = parsed;
         } catch {
-          const ids = featuredRes.data.konten.split(',').map((id: string) => parseInt(id.trim())).filter(Boolean);
-          setStarredIds(ids);
+          ids = featuredRes.data.konten.split(',').map((id: string) => parseInt(id.trim())).filter(Boolean);
         }
+        // Buang bintang milik menu yang sudah dihapus supaya tidak ikut terhitung "Unggulan".
+        if (productsRes.success) {
+          const alive = new Set<number>(productsRes.data.map((p: any) => p.id));
+          const cleaned = ids.filter((id) => alive.has(id));
+          if (cleaned.length !== ids.length) {
+            persistStarred(cleaned).catch(() => {});
+          }
+          ids = cleaned;
+        }
+        setStarredIds(ids);
       }
     } catch (error) {
       console.error("Error loading CMS data:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
   };
+
+  const persistStarred = (ids: number[]) =>
+    api.cms.updateContent("produk_unggulan", {
+      judul: "Produk Unggulan",
+      subJudul: "Maksimal 5 produk",
+      konten: JSON.stringify(ids),
+    });
 
   const toggleStar = async (productId: number) => {
     const isCurrentlyStarred = starredIds.includes(productId);
@@ -108,7 +139,7 @@ export default function CMSPage() {
       newStarred = starredIds.filter((id) => id !== productId);
     } else {
       if (starredIds.length >= 5) {
-        alert("Maksimal 5 menu yang dapat dijadikan Produk Unggulan!");
+        setNotice("Maksimal 5 menu yang dapat dijadikan Produk Unggulan.");
         return;
       }
       newStarred = [...starredIds, productId];
@@ -117,13 +148,9 @@ export default function CMSPage() {
     setStarredIds(newStarred);
 
     try {
-      await api.cms.updateContent("produk_unggulan", {
-        judul: "Produk Unggulan",
-        subJudul: "Maksimal 5 produk",
-        konten: JSON.stringify(newStarred),
-      });
+      await persistStarred(newStarred);
     } catch (error: any) {
-      alert("Gagal mengupdate status unggulan: " + (error.message || "Error"));
+      setNotice("Gagal mengupdate produk unggulan: " + (error.message || "Silakan coba lagi."));
       setStarredIds(starredIds);
     }
   };
@@ -147,8 +174,8 @@ export default function CMSPage() {
   };
 
   const saveHeadline = async () => {
-    if (!headlineForm.judul) {
-      alert("Judul wajib diisi");
+    if (!headlineForm.judul.trim()) {
+      setNotice("Judul wajib diisi sebelum disimpan.");
       return;
     }
     setSavingHeadline(true);
@@ -161,7 +188,7 @@ export default function CMSPage() {
       setHeadlineModalOpen(false);
       loadData();
     } catch (error: any) {
-      alert(error.message || "Gagal menyimpan headline");
+      setNotice(error.message || "Gagal menyimpan headline. Silakan coba lagi.");
     } finally {
       setSavingHeadline(false);
     }
@@ -182,8 +209,8 @@ export default function CMSPage() {
   };
 
   const saveAbout = async () => {
-    if (!aboutForm.judul) {
-      alert("Judul wajib diisi");
+    if (!aboutForm.judul.trim()) {
+      setNotice("Judul wajib diisi sebelum disimpan.");
       return;
     }
     setSavingAbout(true);
@@ -196,7 +223,7 @@ export default function CMSPage() {
       setAboutModalOpen(false);
       loadData();
     } catch (error: any) {
-      alert(error.message || "Gagal menyimpan Tentang Kami");
+      setNotice(error.message || "Gagal menyimpan konten Tentang Kami. Silakan coba lagi.");
     } finally {
       setSavingAbout(false);
     }
@@ -218,7 +245,11 @@ export default function CMSPage() {
 
   const saveContact = async () => {
     if (!contactForm.telepon && !contactForm.email && !contactForm.alamat) {
-      alert("Setidaknya isi salah satu informasi kontak");
+      setNotice("Isi setidaknya satu informasi kontak sebelum menyimpan.");
+      return;
+    }
+    if (contactForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactForm.email.trim())) {
+      setNotice("Format email belum valid. Periksa kembali alamat email.");
       return;
     }
     setSavingContact(true);
@@ -231,7 +262,7 @@ export default function CMSPage() {
       setContactModalOpen(false);
       loadData();
     } catch (error: any) {
-      alert(error.message || "Gagal menyimpan Kontak");
+      setNotice(error.message || "Gagal menyimpan informasi kontak. Silakan coba lagi.");
     } finally {
       setSavingContact(false);
     }
@@ -245,24 +276,49 @@ export default function CMSPage() {
         hargaDefault: String(product.hargaDefault),
         gambar: product.gambar || "",
         deskripsi: product.deskripsi || "",
+        varian: parseVarian(product.varian),
       });
     } else {
       setEditingProduct(null);
-      setProductForm({ namaBarang: "", hargaDefault: "", gambar: "", deskripsi: "" });
+      setProductForm({ namaBarang: "", hargaDefault: "", gambar: "", deskripsi: "", varian: [] });
     }
+    setVarianDraft("");
+    setProductError("");
     setProductModalOpen(true);
   };
 
+  const addVarian = () => {
+    const name = varianDraft.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+    if (!name) return;
+    setProductForm((f) => ({ ...f, varian: parseVarian([...f.varian, name].join(",")).slice(0, 20) }));
+    setVarianDraft("");
+  };
+
+  const removeVarian = (name: string) => {
+    setProductForm((f) => ({ ...f, varian: f.varian.filter((v) => v !== name) }));
+  };
+
   const saveProduct = async () => {
-    if (!productForm.namaBarang || !productForm.hargaDefault) {
-      alert("Nama Barang dan Harga wajib diisi");
+    const price = Number(productForm.hargaDefault);
+    if (!productForm.namaBarang.trim() || !productForm.hargaDefault.trim() || !Number.isFinite(price) || price <= 0) {
+      setProductError("Isi nama barang dan harga yang valid (lebih dari Rp 0) sebelum menyimpan.");
       return;
     }
+    if (price > MAX_HARGA) {
+      setProductError(`Harga melebihi batas. Maksimal Rp ${MAX_HARGA.toLocaleString("id-ID")}.`);
+      return;
+    }
+    setProductError("");
     setSavingProduct(true);
     try {
+      // Varian yang sudah diketik tapi belum ditekan "Tambah" ikut disimpan.
+      const draft = varianDraft.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+      const varianList = parseVarian([...productForm.varian, draft].join(","));
       const productData = {
+        // null = tanpa varian (juga menghapus varian lama saat edit)
+        varian: varianList.length > 0 ? serializeVarian(varianList) : null,
         namaBarang: productForm.namaBarang,
-        hargaDefault: Number(productForm.hargaDefault),
+        hargaDefault: price,
         gambar: productForm.gambar || undefined,
         deskripsi: productForm.deskripsi || undefined,
       };
@@ -274,7 +330,7 @@ export default function CMSPage() {
       setProductModalOpen(false);
       loadData();
     } catch (error: any) {
-      alert(error.message || "Gagal menyimpan produk");
+      setProductError(error.message || "Gagal menyimpan produk. Silakan coba lagi.");
     } finally {
       setSavingProduct(false);
     }
@@ -284,9 +340,19 @@ export default function CMSPage() {
     if (!confirm("Yakin ingin menghapus produk ini?")) return;
     try {
       await api.products.delete(id);
+      // Menu yang dihapus juga harus lepas dari daftar Unggulan.
+      if (starredIds.includes(id)) {
+        const next = starredIds.filter((sid) => sid !== id);
+        setStarredIds(next);
+        try {
+          await persistStarred(next);
+        } catch {
+          // loadData berikutnya akan membersihkan sisa bintang secara otomatis
+        }
+      }
       loadData();
     } catch (error: any) {
-      alert(error.message || "Gagal menghapus produk");
+      setNotice(error.message || "Gagal menghapus produk. Silakan coba lagi.");
     }
   };
 
@@ -312,7 +378,7 @@ export default function CMSPage() {
         setProductForm((f) => ({ ...f, gambar: result.data.url }));
       }
     } catch (error: any) {
-      alert(error.message || "Gagal upload gambar");
+      setProductError(error.message || "Gagal mengunggah gambar. Periksa file dan koneksi Anda.");
     } finally {
       setUploadingImage(false);
     }
@@ -321,8 +387,11 @@ export default function CMSPage() {
   if (loading) {
     return (
       <AppLayout activeMenu="cms">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted">Loading CMS data...</div>
+        <Notice message={notice} onDismiss={() => setNotice("")} />
+        <div aria-label="Memuat konten CMS" className="mx-auto max-w-5xl space-y-5 py-5">
+          <div className="skeleton-shimmer h-8 w-56 rounded-lg" />
+          <div className="skeleton-shimmer h-4 w-80 max-w-full rounded" />
+          <div className="skeleton-shimmer h-72 rounded-2xl border border-border" />
         </div>
       </AppLayout>
     );
@@ -330,6 +399,8 @@ export default function CMSPage() {
 
   return (
     <AppLayout activeMenu="cms">
+      <Notice message={notice} onDismiss={() => setNotice("")} />
+      {loadError && <div className="mb-6"><ErrorState title="Konten CMS belum berhasil dimuat" description="Pastikan koneksi dan sesi masuk Anda aktif, lalu coba muat ulang data." onRetry={loadData} /></div>}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between">
@@ -540,6 +611,11 @@ export default function CMSPage() {
                         </div>
                         <span className="text-[12px] font-medium text-ink">
                           Rp {Number(product.hargaDefault).toLocaleString("id-ID")}
+                          {parseVarian(product.varian).length > 0 && (
+                            <span className="ml-2 font-normal text-muted">
+                              {parseVarian(product.varian).length} varian
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -730,11 +806,19 @@ export default function CMSPage() {
         }
       >
         <div className="flex flex-col gap-4">
+          {productError && (
+            <div role="alert" className="rounded-[10px] border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700">
+              {productError}
+            </div>
+          )}
           <InputField
             label="Nama Makanan"
             placeholder="Contoh: Nasi Goreng Spesial"
             value={productForm.namaBarang}
-            onChange={(v) => setProductForm((f) => ({ ...f, namaBarang: v }))}
+            onChange={(v) => {
+              setProductError("");
+              setProductForm((f) => ({ ...f, namaBarang: v }));
+            }}
             required
           />
           <InputField
@@ -742,7 +826,11 @@ export default function CMSPage() {
             type="number"
             placeholder="Contoh: 25000"
             value={productForm.hargaDefault}
-            onChange={(v) => setProductForm((f) => ({ ...f, hargaDefault: v }))}
+            onChange={(v) => {
+              setProductError("");
+              setProductForm((f) => ({ ...f, hargaDefault: v }));
+            }}
+            error={priceTooHigh ? `Harga melebihi batas. Maksimal Rp ${MAX_HARGA.toLocaleString("id-ID")}.` : undefined}
             required
           />
           <div className="flex flex-col gap-2">
@@ -775,6 +863,60 @@ export default function CMSPage() {
               </button>
             </div>
           )}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="cms-varian" className="text-[12px] font-semibold text-muted">
+                Varian <span className="font-normal">(opsional)</span>
+              </label>
+              {productForm.varian.length > 0 && (
+                <span className="text-[11px] text-muted-light">{productForm.varian.length} varian</span>
+              )}
+            </div>
+            {productForm.varian.length > 0 && (
+              <ul className="flex flex-wrap gap-2">
+                {productForm.varian.map((v) => (
+                  <li
+                    key={v}
+                    className="flex items-center gap-1.5 rounded-full border border-border bg-card-alt py-1 pl-3 pr-1.5 text-[13px] text-ink"
+                  >
+                    <span>{v}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeVarian(v)}
+                      aria-label={`Hapus varian ${v}`}
+                      className="flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-border hover:text-ink"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex gap-2">
+              <input
+                id="cms-varian"
+                value={varianDraft}
+                onChange={(e) => setVarianDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addVarian();
+                  }
+                }}
+                maxLength={60}
+                placeholder="Contoh: Pakai sosis"
+                className="w-full rounded-[10px] border border-border bg-card px-4 py-3 text-[14px] text-ink placeholder:text-muted-light transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+              <Button variant="outline" size="md" onClick={addVarian} disabled={!varianDraft.trim()}>
+                Tambah
+              </Button>
+            </div>
+            <p className="text-[12px] text-muted">
+              Pelanggan memilih varian lewat dropdown saat memesan. Kosongkan kalau menu ini tidak punya varian.
+            </p>
+          </div>
           <InputField
             label="Deskripsi"
             type="textarea"

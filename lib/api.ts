@@ -43,6 +43,13 @@ async function apiRequest<T>(
   });
 
   if (!response.ok) {
+    // Handle 401 globally: clear stale token and redirect to login
+    if (response.status === 401 && typeof window !== 'undefined') {
+      clearToken();
+      window.location.href = '/login';
+      // Return a never-resolving promise so callers don't see a confusing error
+      return new Promise<never>(() => {});
+    }
     const error = await response.json().catch(() => ({ message: 'An error occurred' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }

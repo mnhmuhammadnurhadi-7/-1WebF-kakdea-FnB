@@ -78,9 +78,8 @@ export function Sidebar({ active = "dashboard" }: SidebarProps) {
   const goToProfile = () => router.push("/profile");
 
   return (
-    <aside
-      className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col justify-between bg-sidebar-bg p-6"
-    >
+    <>
+    <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 flex-col justify-between bg-sidebar-bg p-6 md:flex">
       <div className="flex flex-col gap-8">
         <div className="flex items-center gap-3">
           <div
@@ -110,7 +109,7 @@ export function Sidebar({ active = "dashboard" }: SidebarProps) {
                 href={item.href}
                 className={`
                   group flex items-center gap-3 self-stretch rounded-[10px] px-4 py-3
-                  transition-colors
+                  transition-all duration-200 ease-out hover:shadow-lg
                   ${isActive
                     ? "bg-teal-active text-white"
                     : "text-teal-soft hover:bg-sidebar-surface hover:text-white"
@@ -118,7 +117,7 @@ export function Sidebar({ active = "dashboard" }: SidebarProps) {
                 `}
                 style={isActive ? { borderLeft: "3px solid #B8791E" } : undefined}
               >
-                <span className={isActive ? "text-white" : "text-teal-soft group-hover:text-white"}>
+                <span className={`transition-transform duration-200 group-hover:scale-110 ${isActive ? "text-white" : "text-teal-soft group-hover:text-white"}`}>
                   {item.icon}
                 </span>
                 <span className="text-[14px] font-medium">{item.label}</span>
@@ -131,7 +130,7 @@ export function Sidebar({ active = "dashboard" }: SidebarProps) {
       <button
         type="button"
         onClick={goToProfile}
-        className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-white/10 cursor-pointer"
+        className="group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all duration-200 ease-out hover:bg-white/10 hover:shadow-lg cursor-pointer"
         style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-bg">
@@ -145,10 +144,26 @@ export function Sidebar({ active = "dashboard" }: SidebarProps) {
             2 pengguna aktif
           </span>
         </div>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-teal-soft shrink-0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-teal-soft shrink-0 transition-transform duration-200 group-hover:translate-x-0.5">
           <path d="m9 18 6-6-6-6" />
         </svg>
       </button>
     </aside>
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card px-4 py-3 md:hidden">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white"><span className="font-heading text-sm font-black">BD</span></div>
+        <div className="flex flex-col"><span className="font-heading text-base font-semibold leading-tight text-ink">Buku Dapur</span><span className="text-[10px] text-muted">Panel usaha</span></div>
+      </div>
+      <button type="button" onClick={goToProfile} aria-label="Buka profil" className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-bg text-sm font-bold text-teal-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">BP</button>
+    </header>
+    <nav aria-label="Navigasi utama" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-card/95 px-1 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-2 shadow-[0_-6px_24px_rgba(30,42,40,0.08)] backdrop-blur md:hidden">
+      {menu.map((item) => {
+        const isActive = active === item.id;
+        return <Link key={item.id} href={item.href} aria-current={isActive ? "page" : undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent ${isActive ? "text-teal-deep" : "text-muted hover:bg-background"}`}>
+          <span className={isActive ? "text-accent" : ""}>{item.icon}</span><span className="max-w-full truncate">{item.label === "Riwayat & Audit" ? "Audit" : item.label === "Asisten AI" ? "Asisten AI" : item.label === "CMS System" ? "CMS" : item.label}</span>
+        </Link>;
+      })}
+    </nav>
+    </>
   );
 }

@@ -2,39 +2,37 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { api, getImageUrl } from "@/lib/api";
-import { Modal } from "@/components/ui/Modal";
-
-/* ───── SVG Icons ───── */
-const WhatsAppIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-  </svg>
-);
+import { api } from "@/lib/api";
+import { OrderModal } from "@/components/customer/OrderModal";
+import { ProductCard } from "@/components/customer/ProductCard";
+import { ProductVisual } from "@/components/customer/ProductVisual";
+import { WhatsAppIcon } from "@/components/customer/icons";
+import { openWhatsApp, parseVarian, useContactInfo } from "@/lib/whatsapp";
 
 const ChevronLeft = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m15 18-6-6 6-6" />
   </svg>
 );
 
 const ChevronRight = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m9 18 6-6-6-6" />
   </svg>
 );
 
-/* ───── Main Page Component ───── */
+const SLIDE_MS = 5000;
+
 export default function CustomerHomePage() {
-  const router = useRouter();
+  const contact = useContactInfo();
   const [headline, setHeadline] = useState<any>(null);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
-  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [hasProducts, setHasProducts] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [heroSlide, setHeroSlide] = useState(0);
-  const heroIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [paused, setPaused] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -45,9 +43,7 @@ export default function CustomerHomePage() {
           api.publicProducts.getAll().catch(() => ({ success: false, data: [] })),
         ]);
 
-        if (headlineRes?.success && headlineRes.data) {
-          setHeadline(headlineRes.data);
-        }
+        if (headlineRes?.success && headlineRes.data) setHeadline(headlineRes.data);
 
         let starredIds: number[] = [];
         if (featuredRes?.success && featuredRes.data?.konten) {
@@ -63,7 +59,7 @@ export default function CustomerHomePage() {
         }
 
         if (productsRes?.success && Array.isArray(productsRes.data)) {
-          setAllProducts(productsRes.data);
+          setHasProducts(productsRes.data.length > 0);
           const starred = starredIds
             .map((id) => productsRes.data.find((p: any) => p.id === id))
             .filter(Boolean)
@@ -79,228 +75,177 @@ export default function CustomerHomePage() {
     loadData();
   }, []);
 
-  /* ─── Hero auto-slide ─── */
-  const startHeroAutoSlide = useCallback(() => {
-    if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
-    heroIntervalRef.current = setInterval(() => {
-      setHeroSlide((prev) => (featuredProducts.length > 0 ? (prev + 1) % featuredProducts.length : 0));
-    }, 4000);
-  }, [featuredProducts.length]);
+  /* ─── Hero auto-slide: berhenti saat di-hover/fokus, tab disembunyikan, atau sheet pesanan terbuka ─── */
+  const count = featuredProducts.length;
+  const stopTimer = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }, []);
 
   useEffect(() => {
-    if (featuredProducts.length > 1) startHeroAutoSlide();
-    return () => {
-      if (heroIntervalRef.current) clearInterval(heroIntervalRef.current);
-    };
-  }, [featuredProducts.length, startHeroAutoSlide]);
+    stopTimer();
+    if (count < 2 || paused || selectedProduct) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    intervalRef.current = setInterval(() => {
+      if (document.hidden) return;
+      setHeroSlide((prev) => (prev + 1) % count);
+    }, SLIDE_MS);
+    return stopTimer;
+  }, [count, paused, selectedProduct, heroSlide, stopTimer]);
 
-  const goToSlide = (idx: number) => {
-    setHeroSlide(idx);
-    startHeroAutoSlide();
-  };
+  const go = (idx: number) => setHeroSlide(((idx % count) + count) % count);
 
-  const prevSlide = () => {
-    setHeroSlide((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length);
-    startHeroAutoSlide();
-  };
+  const currentHero = featuredProducts[heroSlide];
 
-  const nextSlide = () => {
-    setHeroSlide((prev) => (prev + 1) % featuredProducts.length);
-    startHeroAutoSlide();
-  };
-
-  /* ─── WhatsApp order handler ─── */
-  const handleWhatsAppOrder = (product: any) => {
-    const phoneNumber = "6281234567890";
-    const message = `Halo kak, saya mau pesan *${product.namaBarang}*${product.varian ? ` (${product.varian})` : ""}. Apakah tersedia?`;
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
-  /* ─── Open product popup ─── */
-  const openProductModal = (product: any) => {
-    setSelectedProduct(product);
-  };
-
-  /* ─── Navigate to menu and open popup ─── */
-  const handleTopMenuClick = (product: any) => {
-    openProductModal(product);
-  };
-
+  /* ─── Skeleton saat memuat ─── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
-            style={{ borderColor: "#DAE2FD", borderTopColor: "#1E3A8A" }}
-          />
-          <span className="text-[14px]" style={{ color: "#444651" }}>
-            Memuat...
-          </span>
+      <section style={{ backgroundColor: "#FAF8FF" }}>
+        <div className="mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-10 px-5 py-12 sm:px-6 lg:grid-cols-12 lg:py-16">
+          <div className="flex flex-col gap-4 lg:col-span-5">
+            <div className="c-skeleton h-10 w-11/12 rounded-xl" />
+            <div className="c-skeleton h-10 w-8/12 rounded-xl" />
+            <div className="c-skeleton mt-2 h-4 w-full rounded-md" />
+            <div className="c-skeleton h-4 w-10/12 rounded-md" />
+            <div className="c-skeleton mt-3 h-11 w-48 rounded-full" />
+          </div>
+          <div className="flex justify-center lg:col-span-7">
+            <div className="c-skeleton aspect-square w-[min(80vw,420px)] rounded-full" />
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
-  const currentHeroProduct = featuredProducts[heroSlide];
-
   return (
     <>
-      {/* ═══════════════════════════════════════════════ */}
-      {/* HERO SECTION - Figma: Dynamic Curve & Bold Composition */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* ═════════ HERO ═════════ */}
       <section className="relative overflow-hidden" style={{ backgroundColor: "#FAF8FF" }}>
-        {/* Ambient glow blobs */}
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: 680, height: 680, right: -100, top: -128,
-            background: "linear-gradient(135deg, rgba(255,220,195,0.3) 0%, rgba(220,225,255,0.2) 50%, rgba(220,225,255,0) 100%)",
-            filter: "blur(32px)",
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: 520, height: 520, left: -102, top: 266,
-            background: "rgba(133, 248, 196, 0.25)",
-            filter: "blur(32px)",
-          }}
-        />
-
-        <div className="max-w-[1280px] mx-auto px-6 pt-4 pb-8 relative z-10">
-          {/* Top Notification Pill */}
-          <div className="flex items-center mb-4">
-            <div
-              className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full"
-              style={{ backgroundColor: "#EAEDFF", boxShadow: "0px 1px 2px 0px rgba(0,0,0,0.05)" }}
-            >
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#006C4A" }} />
-              <span
-                className="text-[11px] font-semibold uppercase"
-                style={{ color: "#00236F", letterSpacing: "0.05em" }}
+        <div className="mx-auto max-w-[1280px] px-5 pb-12 pt-8 sm:px-6 lg:pb-16 lg:pt-12">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-6">
+            {/* Teks */}
+            <div className="c-rise flex flex-col gap-6 lg:col-span-5">
+              <div
+                className="inline-flex w-fit items-center gap-2 rounded-full px-3.5 py-1.5"
+                style={{ backgroundColor: "#EAEDFF" }}
               >
-                GARANSI COLD-CHAIN 100% SEGAR H+0
-              </span>
-              <svg width="15" height="14" viewBox="0 0 24 24" fill="#006C4A">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-              </svg>
-            </div>
-          </div>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#006C4A" }} />
+                <span className="text-[12.5px] font-semibold" style={{ color: "#00236F" }}>
+                  Garansi cold-chain 100% segar H+0
+                </span>
+              </div>
 
-          {/* Hero Split Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-            {/* Text Column (5 cols) */}
-            <div className="lg:col-span-5 flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <h1
-                  className="text-[36px] sm:text-[42px] lg:text-[48px] font-bold leading-[1.1] whitespace-pre-line"
-                  style={{ color: "#00236F", letterSpacing: "-0.02em" }}
+                  className="whitespace-pre-line text-[38px] font-bold leading-[1.06] sm:text-[46px] lg:text-[52px]"
+                  style={{ color: "#00236F", letterSpacing: "-0.035em" }}
                 >
                   {headline?.judul || "Sensasi Kelezatan Autentik & Segar dari Resep Pilihan SOJU"}
                 </h1>
                 {headline?.subJudul && (
-                  <p
-                    className="text-[17px] sm:text-[19px] font-semibold leading-snug whitespace-pre-line"
-                    style={{ color: "#006C4A" }}
-                  >
+                  <p className="whitespace-pre-line text-[18px] font-semibold leading-snug" style={{ color: "#006C4A" }}>
                     {headline.subJudul}
                   </p>
                 )}
               </div>
 
-              <p className="text-[16px] leading-[24px] whitespace-pre-line" style={{ color: "#444651" }}>
+              <p className="max-w-[46ch] whitespace-pre-line text-[16px] leading-[26px]" style={{ color: "#444651" }}>
                 {headline?.konten ||
                   "Sajian kuliner nusantara siap santap dan produk beku berstandar HACCP. Dibuat dari olahan murni daging ikan tenggiri segar & ayam pilihan tanpa bahan pengawet sintetik."}
               </p>
 
-              {/* Dual CTA Buttons */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-3">
                 <Link
                   href="/customer/menu"
-                  className="inline-flex items-center justify-center px-8 h-11 rounded-full text-[14px] font-semibold text-white transition-all hover:opacity-90"
+                  className="c-press inline-flex h-12 items-center justify-center rounded-full px-8 text-[15px] font-semibold text-white"
                   style={{ backgroundColor: "#1E3A8A" }}
                 >
                   Lihat Semua Menu
                 </Link>
                 <Link
                   href="/customer/kontak"
-                  className="inline-flex items-center justify-center px-6 h-11 rounded-full text-[14px] font-semibold border transition-all hover:bg-gray-50"
-                  style={{ color: "#00236F", backgroundColor: "#FFFFFF", boxShadow: "0px 1px 2px 0px rgba(0,0,0,0.05)" }}
+                  className="c-press inline-flex h-12 items-center justify-center rounded-full border px-7 text-[15px] font-semibold"
+                  style={{ color: "#00236F", backgroundColor: "#FFFFFF", borderColor: "#DAE2FD" }}
                 >
                   Hubungi Kami
                 </Link>
               </div>
             </div>
 
-            {/* Visual Hero Centerpiece (7 cols) */}
-            <div className="lg:col-span-7 flex justify-center items-center relative min-h-[340px] lg:min-h-[440px]">
-              {/* Background circle gradient */}
+            {/* Platter carousel */}
+            <div
+              className="c-rise relative flex min-h-[320px] flex-col items-center justify-center lg:col-span-7 lg:min-h-[480px]"
+              style={{ animationDelay: "120ms" }}
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
+              onFocus={() => setPaused(true)}
+              onBlur={() => setPaused(false)}
+              role="group"
+              aria-roledescription="carousel"
+              aria-label="Menu unggulan"
+            >
               <div
                 className="absolute rounded-full"
                 style={{
-                  width: "clamp(320px, 40vw, 500px)",
-                  height: "clamp(320px, 40vw, 500px)",
+                  width: "clamp(320px, 42vw, 520px)",
+                  height: "clamp(320px, 42vw, 520px)",
                   background: "linear-gradient(45deg, rgba(130,245,193,0.4) 0%, rgba(218,226,253,1) 50%, rgba(255,183,125,0.3) 100%)",
                 }}
+                aria-hidden="true"
               />
 
-              {/* Main Circular Platter - Carousel */}
               <div
-                className="relative rounded-full overflow-hidden bg-white"
+                className="relative overflow-hidden rounded-full bg-white"
                 style={{
-                  width: "clamp(280px, 35vw, 440px)",
-                  height: "clamp(280px, 35vw, 440px)",
+                  width: "clamp(270px, 34vw, 430px)",
+                  height: "clamp(270px, 34vw, 430px)",
                   padding: 8,
-                  boxShadow: "0px 25px 50px -12px rgba(0,0,0,0.25)",
+                  boxShadow: "0px 28px 56px -16px rgba(0, 35, 111, 0.35)",
                 }}
               >
-                {featuredProducts.map((product, idx) => (
-                  <div
-                    key={product.id}
-                    className="absolute inset-2 rounded-full overflow-hidden transition-opacity duration-700 cursor-pointer"
-                    style={{ opacity: idx === heroSlide ? 1 : 0 }}
-                    onClick={() => handleTopMenuClick(product)}
-                  >
-                    {product.gambar ? (
-                      <img
-                        src={getImageUrl(product.gambar)}
-                        alt={product.namaBarang}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="w-full h-full flex items-center justify-center"
-                        style={{ background: "linear-gradient(135deg, #EAEDFF, #FFDCC3)" }}
+                <div className="relative h-full w-full overflow-hidden rounded-full">
+                  {count === 0 ? (
+                    <ProductVisual src={null} alt="Menu SOJU" />
+                  ) : (
+                    featuredProducts.map((product, idx) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        tabIndex={idx === heroSlide ? 0 : -1}
+                        aria-hidden={idx !== heroSlide}
+                        aria-label={`Pesan ${product.namaBarang}`}
+                        onClick={() => setSelectedProduct(product)}
+                        className="c-hero-slide absolute inset-0 cursor-pointer"
+                        data-active={idx === heroSlide}
                       >
-                        <span className="text-[80px]">🍜</span>
-                      </div>
-                    )}
-                    {/* Gradient overlay */}
-                    <div
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        background: "linear-gradient(0deg, rgba(0,35,111,0.3) 0%, rgba(0,35,111,0) 50%)",
-                      }}
-                    />
-                  </div>
-                ))}
+                        <ProductVisual src={product.gambar} alt={product.namaBarang} eager={idx === 0} />
+                        <span
+                          className="absolute inset-0"
+                          style={{ background: "linear-gradient(0deg, rgba(0,35,111,0.28) 0%, rgba(0,35,111,0) 50%)" }}
+                        />
+                      </button>
+                    ))
+                  )}
+                </div>
 
-                {/* Carousel controls */}
-                {featuredProducts.length > 1 && (
+                {count > 1 && (
                   <>
                     <button
-                      onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center hover:bg-white transition-colors"
-                      style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+                      type="button"
+                      onClick={() => go(heroSlide - 1)}
+                      aria-label="Menu sebelumnya"
+                      className="c-press absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full"
+                      style={{ backgroundColor: "rgba(255,255,255,0.88)", color: "#00236F", boxShadow: "0 2px 10px rgba(0,0,0,0.16)" }}
                     >
                       {ChevronLeft}
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center hover:bg-white transition-colors"
-                      style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+                      type="button"
+                      onClick={() => go(heroSlide + 1)}
+                      aria-label="Menu berikutnya"
+                      className="c-press absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full"
+                      style={{ backgroundColor: "rgba(255,255,255,0.88)", color: "#00236F", boxShadow: "0 2px 10px rgba(0,0,0,0.16)" }}
                     >
                       {ChevronRight}
                     </button>
@@ -308,364 +253,176 @@ export default function CustomerHomePage() {
                 )}
               </div>
 
-              {/* Cold-Chain Badge (bottom-left) */}
               <div
-                className="absolute bottom-4 left-0 lg:left-4 flex items-center gap-1 px-4 py-1 rounded-full z-10"
+                className="absolute bottom-6 left-0 z-10 flex items-center gap-1.5 rounded-full px-4 py-1.5 lg:bottom-10 lg:left-6"
                 style={{ backgroundColor: "#00236F" }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#82F5C1">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#82F5C1" aria-hidden="true">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
-                <span className="text-[11px] font-semibold text-white">
-                  Suhu Simpan -18°C
-                </span>
+                <span className="text-[12px] font-semibold text-white">Suhu simpan -18°C</span>
               </div>
+
+              {currentHero && (
+                <div className="relative mt-6 flex flex-col items-center gap-3">
+                  <p className="text-center text-[15px] font-semibold" style={{ color: "#00236F" }} aria-live="polite">
+                    {currentHero.namaBarang}
+                  </p>
+                  {count > 1 && (
+                    <div className="flex items-center gap-2">
+                      {featuredProducts.map((p, idx) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => go(idx)}
+                          aria-label={`Tampilkan ${p.namaBarang}`}
+                          aria-current={idx === heroSlide}
+                          className="flex h-6 items-center"
+                        >
+                          <span
+                            className="block h-2 rounded-full transition-[width,background-color] duration-300 ease-out"
+                            style={{ width: idx === heroSlide ? 24 : 8, backgroundColor: idx === heroSlide ? "#1E3A8A" : "#C3CCEE" }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Hero slide dots */}
-          {featuredProducts.length > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              {featuredProducts.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => goToSlide(idx)}
-                  className="rounded-full transition-all duration-300"
-                  style={{
-                    width: idx === heroSlide ? 24 : 8,
-                    height: 8,
-                    backgroundColor: idx === heroSlide ? "#1E3A8A" : "#DAE2FD",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Current product name under carousel */}
-          {currentHeroProduct && (
-            <div className="text-center mt-3">
-              <p className="text-[14px] font-semibold" style={{ color: "#00236F" }}>
-                {currentHeroProduct.namaBarang}
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* TOP 5 BEST SELLERS SECTION */}
-      {/* ═══════════════════════════════════════════════ */}
-      {featuredProducts.length > 0 && (
-        <section className="py-8" style={{ backgroundColor: "#FAF8FF" }}>
-          <div className="max-w-[1280px] mx-auto px-6">
-            {/* Section Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-6">
-              <div className="flex flex-col gap-1">
-                <span
-                  className="text-[11px] font-bold uppercase"
-                  style={{ color: "#006C4A", letterSpacing: "0.1em" }}
-                >
-                  FAVORIT KONSUMEN & RESTORAN
-                </span>
-                <h2
-                  className="text-[24px] sm:text-[28px] font-bold"
-                  style={{ color: "#00236F", letterSpacing: "-0.02em" }}
-                >
+      {/* ═════════ MENU PILIHAN ═════════ */}
+      {count > 0 && (
+        <section className="py-10 sm:py-14" style={{ backgroundColor: "#FAF8FF" }}>
+          <div className="mx-auto max-w-[1280px] px-5 sm:px-6">
+            <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+              <div className="flex max-w-2xl flex-col gap-2">
+                <h2 className="text-[26px] font-bold leading-tight sm:text-[32px]" style={{ color: "#00236F", letterSpacing: "-0.025em" }}>
                   5 Menu Pilihan Terbaik #1 SOJU
                 </h2>
-                <p className="text-[14px] leading-[20px]" style={{ color: "#444651" }}>
-                  Dari siomay kukus hangat yang kenyal padat hingga tumpeng pesta eksklusif,
-                  nikmati hidangan paling dicari keluarga Indonesia.
+                <p className="text-[15px] leading-[24px]" style={{ color: "#444651" }}>
+                  Dari siomay kukus hangat yang kenyal padat hingga tumpeng pesta eksklusif, nikmati hidangan paling dicari keluarga Indonesia.
                 </p>
               </div>
-
-              <div className="flex items-center gap-1">
-                <Link
-                  href="/customer/menu"
-                  className="inline-flex items-center justify-center px-4 py-1 rounded-full text-[13px] font-semibold text-white"
-                  style={{ backgroundColor: "#1E3A8A", letterSpacing: "0.01em" }}
-                >
-                  Semua Top Menu
-                </Link>
-              </div>
+              <Link
+                href="/customer/menu"
+                className="c-press inline-flex h-10 shrink-0 items-center justify-center rounded-full px-5 text-[14px] font-semibold text-white"
+                style={{ backgroundColor: "#1E3A8A" }}
+              >
+                Semua Menu
+              </Link>
             </div>
 
-            {/* Bento Product Grid - matching Figma layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-5">
-              {/* Card 1 - Hero Card (7 cols, row layout) */}
-              {featuredProducts[0] && (
-                <div
-                  className="lg:col-span-7 rounded-2xl bg-white overflow-hidden flex flex-col sm:flex-row cursor-pointer group transition-shadow hover:shadow-lg"
-                  style={{ boxShadow: "0px 1px 2px 0px rgba(0,0,0,0.05)" }}
-                  onClick={() => handleTopMenuClick(featuredProducts[0])}
-                >
-                  <div className="sm:w-1/2 relative overflow-hidden">
-                    {featuredProducts[0].gambar ? (
-                      <img
-                        src={getImageUrl(featuredProducts[0].gambar)}
-                        alt={featuredProducts[0].namaBarang}
-                        className="w-full h-full min-h-[220px] object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full min-h-[220px] flex items-center justify-center" style={{ background: "linear-gradient(135deg, #EAEDFF, #FFDCC3)" }}>
-                        <span className="text-[64px]">🍜</span>
-                      </div>
-                    )}
-                    {/* Rank badge */}
-                    <div
-                      className="absolute top-2 left-2 px-2.5 py-1 rounded-lg text-[11px] font-bold"
-                      style={{ backgroundColor: "rgba(0,35,111,0.85)", color: "#82F5C1" }}
-                    >
-                      #1 Best Seller
-                    </div>
-                  </div>
-                  <div className="sm:w-1/2 p-6 flex flex-col justify-between">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="text-[20px] font-bold" style={{ color: "#131B2E" }}>
-                        {featuredProducts[0].namaBarang}
-                      </h3>
-                      {featuredProducts[0].varian && (
-                        <span className="text-[13px]" style={{ color: "#757682" }}>
-                          {featuredProducts[0].varian}
-                        </span>
-                      )}
-                      {featuredProducts[0].deskripsi && (
-                        <p className="text-[14px] mt-2 line-clamp-3" style={{ color: "#444651" }}>
-                          {featuredProducts[0].deskripsi}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between pt-4 mt-4" style={{ borderTop: "1px solid #E2E7FF" }}>
-                      <span className="text-[18px] font-bold" style={{ color: "#00236F" }}>
-                        Rp {Number(featuredProducts[0].hargaDefault || 0).toLocaleString("id-ID")}
-                      </span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleWhatsAppOrder(featuredProducts[0]); }}
-                        className="inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-[13px] font-semibold text-white transition-all hover:opacity-90"
-                        style={{ backgroundColor: "#25D366" }}
-                      >
-                        {WhatsAppIcon}
-                        Pesan
-                      </button>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
+              <FeaturedWide product={featuredProducts[0]} onOpen={setSelectedProduct} />
+              {featuredProducts[1] && (
+                <div className="lg:col-span-5">
+                  <ProductCard product={featuredProducts[1]} onOpen={setSelectedProduct} badge="#2" imageHeight={220} className="h-full" />
                 </div>
               )}
-
-              {/* Card 2 (5 cols, vertical) */}
-              {featuredProducts[1] && (
-                <ProductCard
-                  product={featuredProducts[1]}
-                  rank={2}
-                  colSpan="lg:col-span-5"
-                  onClick={() => handleTopMenuClick(featuredProducts[1])}
-                  onOrder={() => handleWhatsAppOrder(featuredProducts[1])}
-                />
-              )}
-
-              {/* Cards 3, 4, 5 (4 cols each) */}
               {featuredProducts.slice(2, 5).map((product, idx) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  rank={idx + 3}
-                  colSpan="lg:col-span-4"
-                  onClick={() => handleTopMenuClick(product)}
-                  onOrder={() => handleWhatsAppOrder(product)}
-                />
+                <div key={product.id} className="lg:col-span-4">
+                  <ProductCard product={product} onOpen={setSelectedProduct} badge={`#${idx + 3}`} className="h-full" />
+                </div>
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* FAST CHECKOUT / WHATSAPP ORDER LAUNCHER */}
-      {/* ═══════════════════════════════════════════════ */}
-      <section className="py-8" style={{ backgroundColor: "#F2F3FF" }}>
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-[152px]">
-          <div
-            className="flex flex-col sm:flex-row items-center justify-between gap-6 p-8 rounded-2xl"
-            style={{ backgroundColor: "#FFFFFF", boxShadow: "0px 4px 6px -4px rgba(0,0,0,0.1), 0px 10px 15px -3px rgba(0,0,0,0.1)" }}
-          >
-            <div className="flex flex-col gap-2 text-center sm:text-left">
-              <h2
-                className="text-[22px] sm:text-[26px] font-bold"
-                style={{ color: "#00236F", letterSpacing: "-0.02em" }}
-              >
-                Pesan Langsung via WhatsApp
-              </h2>
-              <p className="text-[14px]" style={{ color: "#444651" }}>
-                Klik tombol di bawah untuk langsung pesan melalui WhatsApp. Cepat, mudah, tanpa ribet.
-              </p>
-            </div>
-            <a
-              href="https://wa.me/6281234567890?text=Halo%20kak%2C%20saya%20mau%20pesan%20dari%20SOJU.%20Bisa%20bantu%20saya%3F"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-8 h-12 rounded-full text-[15px] font-semibold text-white whitespace-nowrap transition-all hover:opacity-90"
-              style={{ backgroundColor: "#25D366" }}
-            >
-              {WhatsAppIcon}
-              Chat Sekarang
-            </a>
-          </div>
-        </div>
-      </section>
+      {!hasProducts && (
+        <section className="py-14" style={{ backgroundColor: "#FAF8FF" }}>
+          <p className="mx-auto max-w-md px-6 text-center text-[15px]" style={{ color: "#757682" }}>
+            Menu sedang disiapkan. Silakan kembali lagi sebentar lagi, atau hubungi kami lewat WhatsApp.
+          </p>
+        </section>
+      )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* PRODUCT DETAIL MODAL (Popup) */}
-      {/* ═══════════════════════════════════════════════ */}
-      <Modal
-        open={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        title={selectedProduct?.namaBarang}
-        width={500}
-        footer={
+      {/* ═════════ PESAN LANGSUNG ═════════ */}
+      <section className="px-5 py-10 sm:px-6 sm:py-14" style={{ backgroundColor: "#F2F3FF" }}>
+        <div
+          className="mx-auto flex max-w-[960px] flex-col items-center justify-between gap-6 rounded-3xl bg-white p-8 sm:flex-row sm:p-10"
+          style={{ boxShadow: "0px 12px 32px -12px rgba(0, 35, 111, 0.18)" }}
+        >
+          <div className="flex flex-col gap-2 text-center sm:text-left">
+            <h2 className="text-[22px] font-bold sm:text-[26px]" style={{ color: "#00236F", letterSpacing: "-0.02em" }}>
+              Pesan Langsung via WhatsApp
+            </h2>
+            <p className="text-[14.5px] leading-[22px]" style={{ color: "#444651" }}>
+              Klik tombol di samping untuk langsung pesan melalui WhatsApp. Cepat, mudah, tanpa ribet.
+            </p>
+          </div>
           <button
-            onClick={() => selectedProduct && handleWhatsAppOrder(selectedProduct)}
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-[14px] font-semibold text-white rounded-xl transition-colors hover:opacity-90"
+            type="button"
+            onClick={() => openWhatsApp(contact.waNumber, "Halo kak, saya mau pesan dari SOJU. Bisa bantu saya?")}
+            className="c-press inline-flex h-12 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-8 text-[15px] font-semibold text-white"
             style={{ backgroundColor: "#25D366" }}
           >
             {WhatsAppIcon}
-            Pesan via WhatsApp
+            Chat Sekarang
           </button>
-        }
-      >
-        {selectedProduct && (
-          <div className="flex flex-col gap-5">
-            {/* Product image */}
-            <div className="aspect-[4/3] rounded-xl overflow-hidden" style={{ backgroundColor: "#F2F3FF" }}>
-              {selectedProduct.gambar ? (
-                <img
-                  src={getImageUrl(selectedProduct.gambar)}
-                  alt={selectedProduct.namaBarang}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-[80px]">🍜</span>
-                </div>
-              )}
-            </div>
+        </div>
+      </section>
 
-            {/* Price & info */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[24px] font-bold" style={{ color: "#00236F" }}>
-                  Rp {Number(selectedProduct.hargaDefault || 0).toLocaleString("id-ID")}
-                </span>
-                <span className="text-[14px]" style={{ color: "#757682" }}>
-                  {selectedProduct.satuan}
-                </span>
-              </div>
-
-              {selectedProduct.varian && (
-                <div>
-                  <span className="text-[12px] font-semibold uppercase" style={{ color: "#757682", letterSpacing: "0.05em" }}>
-                    Varian
-                  </span>
-                  <p className="text-[14px]" style={{ color: "#131B2E" }}>
-                    {selectedProduct.varian}
-                  </p>
-                </div>
-              )}
-
-              {selectedProduct.deskripsi && (
-                <div>
-                  <span className="text-[12px] font-semibold uppercase" style={{ color: "#757682", letterSpacing: "0.05em" }}>
-                    Deskripsi
-                  </span>
-                  <p className="text-[14px] leading-relaxed" style={{ color: "#131B2E" }}>
-                    {selectedProduct.deskripsi}
-                  </p>
-                </div>
-              )}
-
-              <div
-                className="flex items-center gap-2 p-3 rounded-xl"
-                style={{ backgroundColor: "#F2F3FF" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#006C4A">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
-                <span className="text-[13px]" style={{ color: "#444651" }}>
-                  Klik tombol di bawah untuk pesan langsung via WhatsApp dengan pesan otomatis.
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <OrderModal product={selectedProduct} waNumber={contact.waNumber} onClose={() => setSelectedProduct(null)} />
     </>
   );
 }
 
-/* ───── Product Card Component ───── */
-interface ProductCardProps {
-  product: any;
-  rank: number;
-  colSpan: string;
-  onClick: () => void;
-  onOrder: () => void;
-}
+/* ───── Kartu besar untuk menu #1 ───── */
+function FeaturedWide({ product, onOpen }: { product: any; onOpen: (p: any) => void }) {
+  if (!product) return null;
+  const varian = parseVarian(product.varian);
+  const varianHint = varian.length > 1 ? `${varian.length} varian` : varian[0];
 
-function ProductCard({ product, rank, colSpan, onClick, onOrder }: ProductCardProps) {
   return (
-    <div
-      className={`${colSpan} rounded-2xl bg-white overflow-hidden flex flex-col cursor-pointer group transition-shadow hover:shadow-lg`}
-      style={{ boxShadow: "0px 1px 2px 0px rgba(0,0,0,0.05)" }}
-      onClick={onClick}
+    <button
+      type="button"
+      onClick={() => onOpen(product)}
+      aria-label={`Pesan ${product.namaBarang}`}
+      className="c-card group flex flex-col overflow-hidden rounded-2xl bg-white text-left sm:col-span-2 sm:flex-row lg:col-span-7"
     >
-      {/* Image */}
-      <div className="relative overflow-hidden" style={{ height: 176 }}>
-        {product.gambar ? (
-          <img
-            src={getImageUrl(product.gambar)}
-            alt={product.namaBarang}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #EAEDFF, #FFDCC3)" }}>
-            <span className="text-[48px]">🍜</span>
-          </div>
-        )}
-        {/* Rank badge */}
-        <div
-          className="absolute top-2 left-2 px-2.5 py-1 rounded-lg text-[11px] font-bold"
-          style={{ backgroundColor: "rgba(0,35,111,0.85)", color: "#82F5C1" }}
+      <div className="relative min-h-[220px] overflow-hidden sm:w-1/2" style={{ backgroundColor: "#F2F3FF" }}>
+        <ProductVisual src={product.gambar} alt={product.namaBarang} className="c-card-img absolute inset-0" />
+        <span
+          className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
+          style={{ backgroundColor: "rgba(0,35,111,0.88)", color: "#82F5C1" }}
         >
-          #{rank}
-        </div>
+          #1 Best Seller
+        </span>
       </div>
-
-      {/* Content */}
-      <div className="p-4 flex flex-col justify-between flex-1">
-        <div className="flex flex-col gap-1">
-          <h3 className="text-[16px] font-bold line-clamp-2" style={{ color: "#131B2E" }}>
+      <div className="flex flex-col justify-between gap-6 p-6 sm:w-1/2">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-[22px] font-bold leading-tight" style={{ color: "#131B2E", letterSpacing: "-0.015em" }}>
             {product.namaBarang}
           </h3>
-          {product.varian && (
-            <span className="text-[12px]" style={{ color: "#757682" }}>
-              {product.varian}
+          {varianHint && (
+            <span className="text-[13px]" style={{ color: "#757682" }}>
+              {varianHint}
             </span>
           )}
+          {product.deskripsi && (
+            <p className="mt-2 line-clamp-4 text-[14px] leading-[22px]" style={{ color: "#444651" }}>
+              {product.deskripsi}
+            </p>
+          )}
         </div>
-
-        <div className="flex items-center justify-between pt-4 mt-auto" style={{ borderTop: "1px solid #E2E7FF" }}>
-          <span className="text-[15px] font-bold" style={{ color: "#00236F" }}>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[20px] font-bold tabular-nums" style={{ color: "#00236F" }}>
             Rp {Number(product.hargaDefault || 0).toLocaleString("id-ID")}
           </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); onOrder(); }}
-            className="inline-flex items-center gap-1 px-3 h-8 rounded-full text-[12px] font-semibold text-white transition-all hover:opacity-90"
+          <span
+            className="c-card-cta inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold text-white"
             style={{ backgroundColor: "#25D366" }}
           >
             {WhatsAppIcon}
             Pesan
-          </button>
+          </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
