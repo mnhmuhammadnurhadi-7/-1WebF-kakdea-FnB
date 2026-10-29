@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { api } from "@/lib/api";
 import { parseVarian, serializeVarian } from "@/lib/whatsapp";
 import { MAX_HARGA } from "../shared/constants";
@@ -90,28 +91,31 @@ export function useProductEditor({ loadData }: { loadData: () => Promise<void> }
   };
 
   const handleImageUpload = async (file: File) => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const allowedTypes = new Set(["image/png", "image/jpeg"]);
+    const allowedExtensions = new Set(["png", "jpg", "jpeg"]);
+
+    if (!extension || !allowedExtensions.has(extension) || !allowedTypes.has(file.type)) {
+      setProductError("Format gambar harus PNG, JPG, atau JPEG.");
+      return;
+    }
+    if (file.size >= 10 * 1024 * 1024) {
+      setProductError("Ukuran gambar harus di bawah 10 MB.");
+      return;
+    }
+
     setUploadingImage(true);
+    setProductError("");
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const token = localStorage.getItem("auth_token");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api/v1"}/cms/upload`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      const blob = await upload(`menu-images/${crypto.randomUUID()}.${extension}`, file, {
+        access: "public",
+        contentType: file.type,
+        handleUploadUrl: "/api/blob-upload",
+        clientPayload: JSON.stringify({ authToken: localStorage.getItem("auth_token") }),
       });
-
-      if (!response.ok) throw new Error("Upload failed");
-
-      const result = await response.json();
-      if (result.success) {
-        setProductForm((f) => ({ ...f, gambar: result.data.url }));
-      }
+      setProductForm((f) => ({ ...f, gambar: blob.url }));
     } catch (error) {
-      setProductError(errMsg(error, "Gagal mengunggah gambar. Periksa file dan koneksi Anda."));
+      setProductError(errMsg(error, "Gagal mengunggah gambar. Periksa konfigurasi Vercel Blob dan koneksi Anda."));
     } finally {
       setUploadingImage(false);
     }
