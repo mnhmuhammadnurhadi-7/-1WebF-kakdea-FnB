@@ -16,14 +16,16 @@ export function ImageUpload({ gambar, uploading, onFile, onRemove }: ImageUpload
         <input
           id="cms-gambar"
           type="file"
-          accept="image/*"
+          accept=".png,.jpg,.jpeg,image/png,image/jpeg"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) onFile(file);
+            e.currentTarget.value = "";
           }}
           disabled={uploading}
           className="w-full text-[13px] text-body file:mr-4 file:cursor-pointer file:rounded-xl file:border-0 file:bg-brand file:px-4 file:py-2.5 file:text-[13px] file:font-bold file:text-white hover:file:brightness-110"
         />
+        <span className="text-[12px] text-faint">Format PNG, JPG, atau JPEG. Ukuran harus di bawah 10 MB.</span>
         {uploading && <span className="text-[12px] text-faint">Uploading...</span>}
       </div>
 
