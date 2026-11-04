@@ -3,19 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { AiCommandBox } from "./ai-command/AiCommandBox";
-import { DashboardError } from "./state/DashboardError";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { DashboardSkeleton } from "./state/DashboardSkeleton";
-import { longDate, shortDate } from "./shared/format";
-import { KpiGrid } from "./kpi/KpiGrid";
-import { RecentOrders } from "./orders/RecentOrders";
-import { SAMPLE_ORDERS, SAMPLE_PP, SAMPLE_SALDO_KAS, TEST_TOKEN, sampleTrend } from "./shared/sampleData";
-import { SalesTrendChart } from "./chart/SalesTrendChart";
-import { SourceRatioCard } from "./chart/SourceRatioCard";
-import { TestBanner } from "./state/TestBanner";
-import { WelcomeHeader } from "./header/WelcomeHeader";
-import type { PemasukanPengeluaran, PeriodeKey, RecentOrder, TrendPoint } from "./shared/types";
+import { AiCommandBox } from "./AiCommandBox";
+import { DashboardError } from "./DashboardError";
+import { DashboardSkeleton } from "./DashboardSkeleton";
+import { longDate, shortDate } from "./format";
+import { KpiGrid } from "./KpiGrid";
+import { RecentOrders } from "./RecentOrders";
+import { SalesTrendChart } from "./SalesTrendChart";
+import { SourceRatioCard } from "./SourceRatioCard";
+import { WelcomeHeader } from "./WelcomeHeader";
+import type { PemasukanPengeluaran, PeriodeKey, RecentOrder, TrendPoint } from "./types";
 
 /** Logic (auth, fetch API, state) dari kode teman; tampilannya memakai komponen di atas. */
 export function DashboardView() {
@@ -29,27 +26,11 @@ export function DashboardView() {
   const [ppData, setPpData] = useState<PemasukanPengeluaran | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [incidentId, setIncidentId] = useState("INC-00000000-0000");
-  const [testMode, setTestMode] = useState(false);
 
   useEffect(() => {
-    // Mode testing (hanya saat npm run dev): buka /dashboard?testing untuk melihat tampilan tanpa backend.
-    if (process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("testing")) {
-      localStorage.setItem("auth_token", TEST_TOKEN);
-    }
-
     const token = localStorage.getItem("auth_token");
     if (!token) {
       router.push("/login");
-      return;
-    }
-
-    if (process.env.NODE_ENV !== "production" && token === TEST_TOKEN) {
-      setTestMode(true);
-      setSummaryData({ saldo_kas: SAMPLE_SALDO_KAS });
-      setOrders(SAMPLE_ORDERS);
-      setSalesTrend(sampleTrend("7d"));
-      setPpData(SAMPLE_PP);
-      setLoading(false);
       return;
     }
 
@@ -101,10 +82,6 @@ export function DashboardView() {
   }, []);
 
   useEffect(() => {
-    if (!loading && testMode) {
-      setSalesTrend(sampleTrend(periode));
-      return;
-    }
     if (!loading) {
       api.dashboard.getSalesTrend(periode).then((res) => {
         if (res.success) setSalesTrend(res.data);
@@ -113,13 +90,13 @@ export function DashboardView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periode]);
 
-  if (loading) return <AppLayout><DashboardSkeleton /></AppLayout>;
+  if (loading) return <><DashboardSkeleton /></>;
 
   if (loadError) {
     return (
-      <AppLayout>
+      <>
         <DashboardError incidentId={incidentId} onRetry={() => window.location.reload()} />
-      </AppLayout>
+      </>
     );
   }
 
@@ -129,8 +106,7 @@ export function DashboardView() {
       : null;
 
   return (
-    <AppLayout>
-      {testMode && <TestBanner />}
+    <>
       <div className="flex flex-col gap-6">
         <WelcomeHeader period={period} />
         <KpiGrid saldoKas={summaryData ? Number(summaryData.saldo_kas || 0) : null} pp={ppData} />
@@ -143,6 +119,6 @@ export function DashboardView() {
           <RecentOrders orders={orders} />
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }
