@@ -50,7 +50,7 @@ export function DataView() {
   const tabs: ChipOption[] = [
     { id: "master", label: "Master Transaksi" },
     ...jenisList.map((j) => ({ id: String(j.id), label: j.namaTransaksi })),
-    { id: "tabel_bebas", label: "Tabel Bebas" },
+    { id: "tabel_bebas", label: "Pendataan" },
   ];
 
   const selectedJenis = jenisList.find((j) => String(j.id) === activeTab) || null;
@@ -91,7 +91,7 @@ export function DataView() {
         ) : activeTab === "tabel_bebas" ? (
           <TabelBebasTab />
         ) : selectedJenis ? (
-          <JenisEntriesTable jenis={selectedJenis} refreshKey={tick} onChanged={refresh} />
+          <JenisEntriesTable key={selectedJenis.id} jenis={selectedJenis} refreshKey={tick} onChanged={refresh} />
         ) : null}
       </div>
       )}

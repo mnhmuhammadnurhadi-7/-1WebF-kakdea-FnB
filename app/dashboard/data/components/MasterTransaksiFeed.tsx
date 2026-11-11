@@ -10,6 +10,7 @@ import { Panel } from "./Panel";
 import { TanggalCell } from "./TanggalCell";
 import type { Entry } from "./types";
 import { InlineState } from "@/components/status/InlineState";
+import { Pagination } from "./Pagination";
 
 type MasterTransaksiFeedProps = { refreshKey: number; onOpenJenis: (jenisId: number) => void };
 
@@ -17,17 +18,21 @@ type MasterTransaksiFeedProps = { refreshKey: number; onOpenJenis: (jenisId: num
 export function MasterTransaksiFeed({ refreshKey, onOpenJenis }: MasterTransaksiFeedProps) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    api.transactions.getAll().then((res) => {
+    api.transactions.getAll({ page, limit: pageSize }).then((res) => {
       if (res.success) {
-        const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+        const list = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
         setEntries(list);
+        setTotal(res.data?.pagination?.total ?? list.length);
       }
     }).catch(console.error).finally(() => setLoading(false));
-  }, [refreshKey]);
+  }, [refreshKey, page, pageSize]);
 
   return (
     <Panel className="overflow-x-auto">
@@ -64,6 +69,7 @@ export function MasterTransaksiFeed({ refreshKey, onOpenJenis }: MasterTransaksi
           )}
         </tbody>
       </table>
+      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} total={total} pageSize={pageSize} onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} />
     </Panel>
   );
 }

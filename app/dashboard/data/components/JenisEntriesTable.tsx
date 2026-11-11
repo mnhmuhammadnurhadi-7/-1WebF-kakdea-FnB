@@ -12,6 +12,7 @@ import type { Entry, Jenis, Kolom } from "./types";
 import { InlineState } from "@/components/status/InlineState";
 import { useToast } from "@/components/feedback/ToastProvider";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { Pagination } from "./Pagination";
 
 type JenisEntriesTableProps = { jenis: Jenis; refreshKey: number; onChanged: () => void };
 
@@ -20,6 +21,9 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
   const [entries, setEntries] = useState<Entry[]>([]);
   const [columns, setColumns] = useState<Kolom[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
   const toast = useToast();
   const { confirm, dialog } = useConfirm();
@@ -28,11 +32,18 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
     try {
       setLoading(true);
       const [entriesRes, columnsRes] = await Promise.all([
-        api.transactions.getAll({ jenis_transaksi_id: jenis.id }),
+        api.transactions.getAll({ jenis_transaksi_id: jenis.id, page, limit: pageSize }),
         api.transactionTypes.getColumns(jenis.id),
       ]);
       if (entriesRes.success) {
-        const list = Array.isArray(entriesRes.data) ? entriesRes.data : (Array.isArray(entriesRes.data?.data) ? entriesRes.data.data : []);
+        const list = Array.isArray(entriesRes.data?.data) ? entriesRes.data.data : (Array.isArray(entriesRes.data) ? entriesRes.data : []);
+        const totalRecords = entriesRes.data?.pagination?.total ?? list.length;
+        const lastPage = Math.max(1, Math.ceil(totalRecords / pageSize));
+        setTotal(totalRecords);
+        if (page > lastPage) {
+          setPage(lastPage);
+          return;
+        }
         setEntries(list);
       }
       if (columnsRes.success) setColumns(columnsRes.data || []);
@@ -41,7 +52,7 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
     } finally {
       setLoading(false);
     }
-  }, [jenis.id]);
+  }, [jenis.id, page, pageSize]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load, refreshKey]);
@@ -110,6 +121,7 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
           )}
         </tbody>
       </table>
+      <Pagination page={page} totalPages={Math.ceil(total / pageSize)} total={total} pageSize={pageSize} onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} />
 
       {editEntry && (
         <EditEntryModal
