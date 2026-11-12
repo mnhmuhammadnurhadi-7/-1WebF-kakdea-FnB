@@ -465,34 +465,6 @@ export const cmsApi = {
     });
   },
 
-  // Menu CRUD
-  getMenu: async () => {
-    return apiRequest<{ success: boolean; data: any }>('/cms/menu');
-  },
-
-  getMenuById: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`);
-  },
-
-  createMenu: async (data: { label: string; path: string; urutan?: number; aktif?: boolean }) => {
-    return apiRequest<{ success: boolean; data: any }>('/cms/menu', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  updateMenu: async (id: number, data: { label?: string; path?: string; urutan?: number; aktif?: boolean }) => {
-    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  deleteMenu: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`, {
-      method: 'DELETE',
-    });
-  },
 };
 
 // Public CMS API (untuk customer page - tanpa auth)
@@ -512,12 +484,6 @@ export const publicCmsApi = {
     return response.json();
   },
 
-  getMenu: async () => {
-    const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/cms/menu`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch public menu');
-    return response.json();
-  },
 };
 
 // Helper to resolve image URL correctly
