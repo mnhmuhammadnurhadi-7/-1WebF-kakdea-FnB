@@ -9,7 +9,7 @@ export function StatCards({ stats }: { stats: Stat[] }) {
       {stats.map((s, i) => {
         const hero = i === 0;
         return (
-          <div key={s.l} className={"flex items-center gap-4 rounded-card p-5 " + (hero ? "bg-navy text-white shadow-navy" : "bg-white text-ink shadow-card")}>
+          <div key={s.l} className={"flex items-center gap-4 rounded-[20px] border p-5 transition-shadow " + (hero ? "border-white/10 bg-gradient-to-br from-navy via-navy to-brand text-white shadow-navy" : "border-line bg-white text-ink shadow-card hover:shadow-card-hover")}>
             <span className={"flex size-11 shrink-0 items-center justify-center rounded-xl " + (hero ? "bg-white/15 text-white" : "bg-[#e8f0ff] text-brand")}>
               <Icon name={s.icon} size={20} />
             </span>

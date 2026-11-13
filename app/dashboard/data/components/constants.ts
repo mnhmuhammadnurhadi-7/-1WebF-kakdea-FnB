@@ -16,4 +16,7 @@ export const ARAH_OPTIONS = [
 export const emptyColumn = (): ColumnDraft => ({ namaKolom: "", tipeData: "TEKS", opsiDropdown: "" });
 
 /* class tabel dipakai bareng semua tabel di halaman Data */
-export const TH = "px-5 py-3.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-faint whitespace-nowrap";
+const TH_BASE = "whitespace-nowrap px-4 py-3 text-[10px] font-extrabold uppercase tracking-[.1em] text-label";
+export const TH = `${TH_BASE} text-left`;
+export const TH_CENTER = `${TH_BASE} text-center`;
+export const TH_RIGHT = `${TH_BASE} text-right`;

@@ -11,13 +11,13 @@ type KpiGridProps = {
 };
 
 export function KpiGrid({ saldoKas, pp }: KpiGridProps) {
-  const GRID = "grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]";
+  const GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[1.35fr_1fr_1fr_1fr]";
 
   if (saldoKas === null) {
     return (
       <div className={GRID}>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton-shimmer min-h-[168px] rounded-card shadow-card" />
+          <div key={i} className="skeleton-shimmer min-h-[164px] rounded-[20px] bg-white shadow-card" />
         ))}
       </div>
     );

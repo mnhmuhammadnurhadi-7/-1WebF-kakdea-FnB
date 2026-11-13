@@ -10,7 +10,7 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="relative flex flex-col gap-1.5 px-4 py-[18px]">
+    <nav className="flex flex-col gap-1 px-3 py-4">
       {SIDEBAR_MENU.map((item) => {
         const active = item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
         return (
@@ -19,13 +19,13 @@ export function SidebarNav() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={
-              "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-[15px] transition-colors " +
+              "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors " +
               (active
-                ? "bg-[linear-gradient(160deg,#1E8BFF,#06B6D4)] font-semibold text-white shadow-menu"
-                : "font-medium text-white/80 hover:bg-white/10 hover:text-white")
+                ? "bg-white/10 font-semibold text-white"
+                : "font-medium text-white/75 hover:bg-white/5 hover:text-white")
             }
           >
-            <SidebarIcon name={item.icon} size={20} />
+            <SidebarIcon name={item.icon} size={18} className={active ? "text-sky" : ""} />
             {item.label}
           </Link>
         );

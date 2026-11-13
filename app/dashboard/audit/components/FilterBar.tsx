@@ -4,15 +4,25 @@ import { Icon } from "./Icon";
 import { Panel } from "./Panel";
 import { sheetTabs, sourceTabs } from "./constants";
 
-type FilterBarProps = { sheet: string; onSheet: (id: string) => void; source: string; onSource: (id: string) => void };
+type FilterBarProps = {
+  sheet: string;
+  onSheet: (id: string) => void;
+  source: string;
+  onSource: (id: string) => void;
+  search: string;
+  onSearch: (value: string) => void;
+};
 
-export function FilterBar({ sheet, onSheet, source, onSource }: FilterBarProps) {
+export function FilterBar({ sheet, onSheet, source, onSource, search, onSearch }: FilterBarProps) {
   return (
     <Panel padding="md" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-[240px] flex-1 items-center gap-2 rounded-full bg-app px-4 py-2.5 text-faint">
           <Icon name="search" size={16} />
           <input
+            value={search}
+            onChange={(event) => onSearch(event.target.value)}
+            aria-label="Cari riwayat audit"
             type="text"
             placeholder="Cari ID audit, deskripsi, nama record, actor…"
             className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-faint"

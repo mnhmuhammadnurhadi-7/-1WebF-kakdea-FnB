@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useContactInfo } from "@/lib/whatsapp";
 
@@ -69,12 +70,15 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       >
         <div className="mx-auto max-w-[1280px] px-5 sm:px-6">
           <div className="flex h-[72px] items-center justify-between">
-            <Link href="/customer" className="flex flex-col rounded-md" aria-label="SOJU, ke beranda">
-              <span className="text-[19px] font-bold leading-tight text-white" style={{ letterSpacing: "-0.025em" }}>
-                SOJU
-              </span>
-              <span className="text-[10.5px] font-semibold uppercase text-white/80" style={{ letterSpacing: "0.06em" }}>
-                Kuliner &amp; Frozen Food
+            <Link href="/customer" className="flex items-center gap-2.5 rounded-md" aria-label="SOJU, ke beranda">
+              <Image src="/soju.png" alt="" width={40} height={40} loading="eager" className="shrink-0 rounded-full object-contain" />
+              <span className="flex flex-col">
+                <span className="text-[19px] font-bold leading-tight text-white" style={{ letterSpacing: "-0.025em" }}>
+                  SOJU
+                </span>
+                <span className="text-[10.5px] font-semibold uppercase text-white/80" style={{ letterSpacing: "0.06em" }}>
+                  Kuliner &amp; Frozen Food
+                </span>
               </span>
             </Link>
 

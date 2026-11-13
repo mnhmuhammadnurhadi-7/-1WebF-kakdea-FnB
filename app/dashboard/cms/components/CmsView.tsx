@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AboutModal } from "./AboutModal";
+import { Button } from "./Button";
 import { CmsHeader } from "./CmsHeader";
 import { CmsSkeleton } from "./CmsSkeleton";
 import { CmsStats } from "./CmsStats";
@@ -9,6 +11,7 @@ import { CmsTabs, type CmsTab } from "./CmsTabs";
 import { ContactModal } from "./ContactModal";
 import { ContentTab } from "./ContentTab";
 import { HeadlineModal } from "./HeadlineModal";
+import { Icon } from "./Icon";
 import { MenuTab } from "./MenuTab";
 import { ProductModal } from "./ProductModal";
 import { useCmsData } from "./useCmsData";
@@ -43,9 +46,29 @@ export function CmsView() {
         <StatePanel kind="gagal-memuat" subject="Konten CMS" description="Pastikan koneksi dan sesi masuk Anda aktif, lalu coba muat ulang data. Konten yang sudah tersimpan tidak hilang." onRetry={data.loadData} />
       ) : (
       <div className="flex flex-col gap-6">
-        <CmsHeader onAddMenu={() => product.openProductModal()} />
+        <CmsHeader />
         <CmsStats menuCount={data.products.length} starredCount={data.starredIds.length} contact={data.contactContent} />
-        <CmsTabs value={activeTab} onChange={setActiveTab} menuCount={data.products.length} />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link
+              href="/customer"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-white px-3.5 text-[12.5px] font-bold text-ink shadow-btn transition hover:bg-app"
+            >
+              Lihat Halaman Customer
+              <Icon name="external" size={15} stroke={2} />
+            </Link>
+            <Button
+              size="sm"
+              icon="plus"
+              onClick={() => product.openProductModal()}
+            >
+              Tambah Menu
+            </Button>
+          </div>
+          <CmsTabs value={activeTab} onChange={setActiveTab} menuCount={data.products.length} />
+        </div>
 
         {activeTab === "content" ? (
           <ContentTab

@@ -23,7 +23,6 @@ export function useCmsData() {
   const setNotice = (msg: string) => {
     if (msg) toast.error("Terjadi kendala", { description: msg });
   };
-
   const persistStarred = (ids: number[]) =>
     api.cms.updateContent("produk_unggulan", {
       judul: "Produk Unggulan",

@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
-type Variant = "primary" | "secondary" | "outline" | "danger";
+type Variant = "primary" | "secondary" | "outline" | "danger" | "hero";
 type Size = "sm" | "md";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -16,6 +16,7 @@ const VARIANT: Record<Variant, string> = {
   secondary: "bg-white text-ink shadow-btn hover:bg-app",
   outline: "border border-line bg-white text-ink hover:bg-app",
   danger: "border border-bad/30 bg-white text-bad hover:bg-bad-tint",
+  hero: "bg-white text-navy shadow-btn hover:bg-sky-tint",
 };
 
 const SIZE: Record<Size, string> = {

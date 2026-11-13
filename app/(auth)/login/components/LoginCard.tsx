@@ -16,15 +16,12 @@ export function LoginCard({ email, onEmail, password, onPassword, loading, error
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="w-full max-w-[440px] rounded-[28px] bg-white/70 p-3 shadow-card">
-      <div className="rounded-[22px] bg-white p-7 shadow-card">
-        <div className="mb-6 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-brand">Otentikasi admin</p>
-            <h2 className="mt-2 text-[26px] font-bold leading-tight tracking-[-.03em] text-ink">Masuk ke panel SOJU</h2>
-            <p className="mt-1 text-[13px] text-body">Gunakan email dan kata sandi admin Anda.</p>
-          </div>
-          <span aria-hidden="true" className="mt-1 size-2.5 rounded-full bg-ok shadow-[0_0_0_4px_rgba(5,150,105,.15)]" />
+    <div className="w-full rounded-[34px] bg-white/65 p-4 shadow-[0_18px_48px_rgba(25,39,68,.08)]">
+      <div className="rounded-[24px] border border-white bg-white px-6 py-6 shadow-[0_6px_18px_rgba(25,39,68,.05)] sm:px-7 sm:py-7">
+        <div className="mb-6">
+          <p className="text-[11px] font-extrabold uppercase tracking-[.14em] text-brand">Otentikasi admin</p>
+          <h2 className="mt-2 text-[24px] font-bold leading-tight tracking-[-.03em] text-ink">Masuk ke panel SOJU</h2>
+          <p className="mt-1 text-[13px] text-body">Gunakan email dan kata sandi admin Anda.</p>
         </div>
 
         <form className="space-y-5" onSubmit={onSubmit}>
@@ -59,7 +56,7 @@ export function LoginCard({ email, onEmail, password, onPassword, loading, error
           <button
             type="submit"
             disabled={loading || !email.trim() || !password}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[14px] font-bold text-white shadow-blue transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[14px] font-bold text-white shadow-[0_8px_18px_rgba(25,105,255,.2)] transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading && <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
             {loading ? "Memeriksa akun…" : "Masuk ke Panel SOJU →"}

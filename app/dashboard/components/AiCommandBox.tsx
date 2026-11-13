@@ -1,67 +1,28 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
 
-/** Pintasan perintah: tiap tombol membuka Asisten AI dengan perintah terisi (tanpa mengetik ulang). */
-const AI_COMMANDS = [
-  { cmd: "/add", label: "Catat Cepat", tone: "brand" },
-  { cmd: "/ask", label: "Cek Laba", tone: "brand" },
-  { cmd: "/edit", label: "Koreksi", tone: "bad" },
-  { cmd: "/stock", label: "Stok", tone: "bad" },
-] as const;
-
-const CORNER = "absolute size-3 border-brand/40";
 const AI_PAGE = "/dashboard/ai";
 
 export function AiCommandBox() {
   return (
-    <section className="relative rounded-[24px] bg-white px-[22px] py-5 shadow-card">
-      {/* Siku pojok dekoratif */}
-      <span className={CORNER + " left-2.5 top-2.5 rounded-tl-md border-l-2 border-t-2"} />
-      <span className={CORNER + " right-2.5 top-2.5 rounded-tr-md border-r-2 border-t-2"} />
-      <span className={CORNER + " bottom-2.5 left-2.5 rounded-bl-md border-b-2 border-l-2"} />
-      <span className={CORNER + " bottom-2.5 right-2.5 rounded-br-md border-b-2 border-r-2"} />
-
-      <div className="flex items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-brand text-white shadow-blue">
-          <Icon name="bot" size={20} />
+    <section className="flex flex-col gap-4 rounded-[20px] border border-line bg-white p-5 shadow-card sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sky-tint text-brand">
+          <Icon name="bot" size={21} />
         </span>
-        <div>
-          <h2 className="flex items-center gap-2 text-[19px] font-bold tracking-[-.03em]">
-            BukuKita AI - Pencatat Suara, Chat &amp; Stok Dapur
-            <span className="size-2 rounded-full bg-ok shadow-[0_0_0_3px_rgba(5,150,105,.18)]" />
-          </h2>
-          <p className="text-[13px] text-body">Kecerdasan otomatis input pembukuan dan stok harian frozen food.</p>
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[.12em] text-brand">Asisten pintar</p>
+          <h2 className="mt-0.5 text-base font-bold tracking-[-.02em]">BukuKita AI</h2>
+          <p className="text-sm text-body">Catat transaksi atau cek laba di Asisten AI.</p>
         </div>
       </div>
 
-      <div className="my-3.5 flex flex-wrap gap-2.5">
-        {AI_COMMANDS.map((c) => (
-          <Link
-            key={c.cmd}
-            href={`${AI_PAGE}?cmd=${encodeURIComponent(c.cmd)}`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-app px-3.5 py-[7px] text-[13px] font-semibold transition hover:border-brand/40 hover:bg-white"
-          >
-            <b className={c.tone === "brand" ? "text-brand" : "text-bad"}>{c.cmd}</b>
-            {c.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* Baris input berupa satu tombol besar: klik di mana pun → halaman Asisten AI */}
       <Link
         href={AI_PAGE}
-        aria-label="Buka Asisten AI untuk mengetik perintah atau menempel chat pesanan"
-        className="group flex h-[50px] items-center gap-3 rounded-btn border border-[#eeebe3] bg-cream pl-3.5 pr-1.5 shadow-inset transition hover:border-brand/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-brand px-5 text-sm font-semibold text-white shadow-btn transition hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:self-auto"
       >
-        <Icon name="filter" size={17} stroke={2} className="text-faint" />
-        <span className="min-w-0 flex-1 truncate text-sm text-faint">Ketik perintah atau tempel chat pesanan WhatsApp di sini...</span>
-        <span aria-hidden="true" className="flex size-[38px] items-center justify-center rounded-[11px] bg-white text-brand shadow-btn">
-          <Icon name="mic" size={17} stroke={2} />
-        </span>
-        <span aria-hidden="true" className="inline-flex h-10 items-center gap-2 rounded-[13px] bg-brand px-5 text-sm font-bold text-white shadow-blue transition group-hover:bg-brand-hover">
-          Kirim
-          <Icon name="send" size={15} stroke={2.2} />
-        </span>
+        Buka Asisten AI
+        <Icon name="send" size={15} stroke={2} />
       </Link>
     </section>
   );

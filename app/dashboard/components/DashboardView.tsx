@@ -8,11 +8,10 @@ import { DashboardError } from "./DashboardError";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { longDate, shortDate } from "./format";
 import { KpiGrid } from "./KpiGrid";
-import { RecentOrders } from "./RecentOrders";
-import { SalesTrendChart } from "./SalesTrendChart";
+import { CashflowChart } from "./CashflowChart";
 import { SourceRatioCard } from "./SourceRatioCard";
 import { WelcomeHeader } from "./WelcomeHeader";
-import type { PemasukanPengeluaran, PeriodeKey, RecentOrder, TrendPoint } from "./types";
+import type { CashflowPoint, InputSourceStats, PemasukanPengeluaran, PeriodeKey } from "./types";
 
 /** Logic (auth, fetch API, state) dari kode teman; tampilannya memakai komponen di atas. */
 export function DashboardView() {
@@ -20,49 +19,35 @@ export function DashboardView() {
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [summaryData, setSummaryData] = useState<any>(null);
-  const [orders, setOrders] = useState<RecentOrder[]>([]);
-  const [salesTrend, setSalesTrend] = useState<TrendPoint[]>([]);
-  const [periode, setPeriode] = useState<PeriodeKey>("7d");
+  const [cashflow, setCashflow] = useState<CashflowPoint[]>([]);
+  const [inputSources, setInputSources] = useState<InputSourceStats | null>(null);
+  const [periode, setPeriode] = useState<PeriodeKey>("mingguan");
   const [ppData, setPpData] = useState<PemasukanPengeluaran | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [incidentId, setIncidentId] = useState("INC-00000000-0000");
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
+    if (!localStorage.getItem("auth_token")) {
       router.push("/login");
       return;
     }
 
     async function fetchData() {
       try {
-        const [summaryRes, ordersRes, , trendRes] = await Promise.all([
+        const [summaryRes, trendRes, sourcesRes] = await Promise.all([
           api.dashboard.getSummary("7d"),
-          api.orders.getAll(),
-          api.products.getAll(),
-          api.dashboard.getSalesTrend(periode),
+          api.dashboard.getCashflowTrend("mingguan"),
+          api.dashboard.getInputSources("30d"),
         ]);
 
         if (summaryRes.success) setSummaryData(summaryRes.data);
 
-        if (ordersRes.success) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const recent: RecentOrder[] = ordersRes.data.slice(0, 4).map((order: any) => ({
-            id: order.id,
-            title: order.detail || order.kode || "Order",
-            date: new Date(order.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
-            amount: Number(order.totalInvoice ?? order.nominal ?? 0),
-            via: order.sumberInput === "AI" ? "AI" : "MANUAL",
-            source: order.jenisOrder || order.sumberOrder || "-",
-          }));
-          setOrders(recent);
-        }
-
-        if (trendRes.success) setSalesTrend(trendRes.data);
+        if (trendRes.success) setCashflow(trendRes.data);
+        if (sourcesRes.success) setInputSources(sourcesRes.data);
 
         // Pemasukan vs pengeluaran
         try {
-          const ppRes = await api.dashboard.getPemasukanPengeluaran(periode);
+          const ppRes = await api.dashboard.getPemasukanPengeluaran("7d");
           if (ppRes.success) setPpData(ppRes.data);
         } catch {
           /* endpoint mungkin belum ada */
@@ -78,17 +63,15 @@ export function DashboardView() {
     }
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!loading) {
-      api.dashboard.getSalesTrend(periode).then((res) => {
-        if (res.success) setSalesTrend(res.data);
+      api.dashboard.getCashflowTrend(periode).then((res) => {
+        if (res.success) setCashflow(res.data);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periode]);
+  }, [periode, loading]);
 
   if (loading) return <><DashboardSkeleton /></>;
 
@@ -101,8 +84,8 @@ export function DashboardView() {
   }
 
   const period =
-    salesTrend.length > 0
-      ? `${shortDate(salesTrend[0].tanggal)} - ${longDate(salesTrend[salesTrend.length - 1].tanggal)}`
+    cashflow.length > 0
+      ? `${shortDate(cashflow[0].tanggal)} - ${longDate(cashflow[cashflow.length - 1].tanggal)}`
       : null;
 
   return (
@@ -111,12 +94,9 @@ export function DashboardView() {
         <WelcomeHeader period={period} />
         <KpiGrid saldoKas={summaryData ? Number(summaryData.saldo_kas || 0) : null} pp={ppData} />
         <AiCommandBox />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-6">
-            <SalesTrendChart data={salesTrend} periode={periode} onPeriode={setPeriode} />
-            <SourceRatioCard />
-          </div>
-          <RecentOrders orders={orders} />
+        <div className="flex min-w-0 flex-col gap-5">
+          <CashflowChart data={cashflow} periode={periode} onPeriode={setPeriode} />
+          <SourceRatioCard data={inputSources} />
         </div>
       </div>
     </>

@@ -163,7 +163,7 @@ export function AiView({ initialInput = "" }: { initialInput?: string }) {
 
   return (
     <>
-      <div className="flex h-[calc(100dvh-8.75rem)] min-h-[600px] flex-col gap-5">
+      <div className="-mb-11 flex h-[calc(100dvh-6rem)] min-h-0 flex-col gap-1 overflow-hidden">
         <AiHeader />
         <CommandChips chips={suggestionChips} activeChip={activeChip} onPick={handleChipClick} />
         <ChatThread messages={messages} copiedId={copiedId} onCopy={handleCopy} onRetry={handleRetry} onEdit={handleEditMessage} onPickCommand={handlePickCommand} scrollRef={scrollRef} />

@@ -1,12 +1,17 @@
 import type { ChipOption } from "./types";
 
-type DataTabsProps = { loading: boolean; tabs: ChipOption[]; value: string; onChange: (id: string) => void };
+type DataTabsProps = {
+  loading: boolean;
+  tabs: ChipOption[];
+  value: string;
+  onChange: (id: string) => void;
+};
 
 export function DataTabs({ loading, tabs, value, onChange }: DataTabsProps) {
   return (
-    <div className="flex flex-wrap gap-2.5 border-b border-line pb-4">
+    <div className="flex flex-wrap gap-2 rounded-[20px] border border-line bg-white p-2 shadow-card">
       {loading ? (
-        <span className="px-2 py-1 text-[13px] text-faint">Memuat tab...</span>
+        <span className="px-3 py-2 text-[13px] font-medium text-faint">Memuat tab...</span>
       ) : (
         tabs.map((t) => {
           const active = t.id === value;
@@ -17,8 +22,8 @@ export function DataTabs({ loading, tabs, value, onChange }: DataTabsProps) {
               onClick={() => onChange(t.id)}
               aria-pressed={active}
               className={
-                "inline-flex h-11 items-center rounded-full px-5 text-[13.5px] font-bold transition " +
-                (active ? "bg-brand text-white shadow-blue" : "bg-white text-ink shadow-btn hover:bg-app")
+                "inline-flex min-h-10 items-center rounded-xl px-4 text-[13px] font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20 " +
+                (active ? "bg-brand text-white shadow-blue" : "text-muted hover:bg-app hover:text-navy")
               }
             >
               {t.label}

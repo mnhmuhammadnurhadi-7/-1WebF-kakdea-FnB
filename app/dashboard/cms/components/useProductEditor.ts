@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { upload } from "@vercel/blob/client";
 import { api } from "@/lib/api";
 import { parseVarian, serializeVarian } from "@/lib/whatsapp";
 import { MAX_HARGA } from "./constants";
@@ -102,23 +101,23 @@ export function useProductEditor({ loadData }: { loadData: () => Promise<void> }
       setProductError("Format gambar harus PNG, JPG, atau JPEG.");
       return;
     }
-    if (file.size >= 10 * 1024 * 1024) {
-      setProductError("Ukuran gambar harus di bawah 10 MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      setProductError("Ukuran gambar maksimal 5 MB.");
       return;
     }
 
     setUploadingImage(true);
     setProductError("");
     try {
-      const blob = await upload(`menu-images/${crypto.randomUUID()}.${extension}`, file, {
-        access: "public",
-        contentType: file.type,
-        handleUploadUrl: "/api/blob-upload",
-        clientPayload: JSON.stringify({ authToken: localStorage.getItem("auth_token") }),
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Gagal membaca gambar"));
+        reader.onerror = () => reject(new Error("Gagal membaca gambar"));
+        reader.readAsDataURL(file);
       });
-      setProductForm((f) => ({ ...f, gambar: blob.url }));
+      setProductForm((f) => ({ ...f, gambar: dataUrl }));
     } catch (error) {
-      setProductError(errMsg(error, "Gagal mengunggah gambar. Periksa konfigurasi Vercel Blob dan koneksi Anda."));
+      setProductError(errMsg(error, "Gagal membaca gambar."));
     } finally {
       setUploadingImage(false);
     }

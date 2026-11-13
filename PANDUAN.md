@@ -25,7 +25,7 @@ lib/        api.ts, whatsapp.ts
 ## Cara pasang
 1. Hapus folder `app`, `components`, `lib` yang lama (jangan hapus package.json, public, .env, next.config).
 2. Salin tiga folder dari zip ini ke proyek, timpa `eslint.config.mjs` jika perlu.
-3. `npm run dev`. Dashboard tanpa backend: buka `http://localhost:3000/dashboard?testing`.
+3. `npm run dev`. Untuk pratinjau dashboard dan Data tanpa backend, buka `http://localhost:3000/dashboard?preview=1`, lalu pilih **Data** di sidebar.
 
 ## Yang berubah
 - `globals.css` dan `layout.tsx`: warna Figma + hanya font Plus Jakarta Sans (sebelumnya masih krem/amber + Fraunces).

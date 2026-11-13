@@ -1,8 +1,15 @@
 "use client";
 
-export function SourceRatioCard() {
+import type { InputSourceStats } from "./types";
+
+export function SourceRatioCard({ data }: { data: InputSourceStats | null }) {
+  const rows = [
+    { key: "AI", label: "Asisten AI otomatis", count: data?.ai ?? 0, percent: data?.aiPersen ?? 0, color: "bg-brand", badge: "bg-brand" },
+    { key: "MANUAL", label: "Input tombol +", count: data?.manual ?? 0, percent: data?.manualPersen ?? 0, color: "bg-sky", badge: "bg-navy" },
+  ];
+
   return (
-    <section className="rounded-panel bg-white p-6 shadow-card">
+    <section className="min-w-0 rounded-panel border border-line bg-white p-5 shadow-card sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold tracking-[-.03em]">Sumber Input Data</h2>
@@ -12,37 +19,23 @@ export function SourceRatioCard() {
       </div>
 
       <div className="mt-5 flex flex-col gap-5">
-        <div>
-          <div className="mb-2 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-brand px-[9px] py-[3px] text-[10.5px] font-extrabold tracking-[.06em] text-white">AI</span>
-              <span className="text-sm">Asisten AI otomatis</span>
+        {rows.map((row) => (
+          <div key={row.key}>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className={`shrink-0 rounded-full ${row.badge} px-[9px] py-[3px] text-[10px] font-extrabold tracking-[.06em] text-white`}>{row.key}</span>
+                <span className="text-sm">{row.label}</span>
+              </div>
+              <div className="text-right">
+                <span className="tabular text-base font-bold">{row.percent}%</span>
+                <span className="ml-1.5 text-[10px] text-muted">{row.count.toLocaleString("id-ID")} entri</span>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="tabular text-lg font-extrabold">72%</span>
-              <span className="ml-2 text-[11px] text-muted">318 entri</span>
-            </div>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-app">
-            <div className="h-full rounded-full bg-brand" style={{ width: "72%" }} />
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-2 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-navy px-[9px] py-[3px] text-[10.5px] font-extrabold tracking-[.06em] text-white">MANUAL</span>
-              <span className="text-sm">Input tombol +</span>
-            </div>
-            <div className="text-right">
-              <span className="tabular text-lg font-extrabold">28%</span>
-              <span className="ml-2 text-[11px] text-muted">124 entri</span>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-app">
+              <div className={`h-full rounded-full ${row.color}`} style={{ width: `${row.percent}%` }} />
             </div>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-app">
-            <div className="h-full rounded-full bg-sky" style={{ width: "28%" }} />
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   );

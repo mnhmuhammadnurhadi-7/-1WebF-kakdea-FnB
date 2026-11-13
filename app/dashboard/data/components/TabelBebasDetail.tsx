@@ -12,12 +12,15 @@ import type { FreeRow, FreeTable } from "./types";
 import { InlineState } from "@/components/status/InlineState";
 import { useToast } from "@/components/feedback/ToastProvider";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { Pagination } from "./Pagination";
 
 type TabelBebasDetailProps = { table: FreeTable; onBack: () => void };
 
 export function TabelBebasDetail({ table, onBack }: TabelBebasDetailProps) {
   const [detail, setDetail] = useState<FreeTable>(table);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [rowModalOpen, setRowModalOpen] = useState(false);
   const [rowValues, setRowValues] = useState<Record<string, string>>({});
@@ -43,6 +46,9 @@ export function TabelBebasDetail({ table, onBack }: TabelBebasDetailProps) {
   useEffect(() => { load(); }, [load]);
 
   const columns = detail.kolom || [];
+  const rows = detail.baris || [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const visibleRows = rows.slice((Math.min(page, totalPages) - 1) * pageSize, Math.min(page, totalPages) * pageSize);
 
   const openAddRow = () => {
     setEditingRow(null);
@@ -118,10 +124,10 @@ export function TabelBebasDetail({ table, onBack }: TabelBebasDetailProps) {
             <tbody className="divide-y divide-line-soft">
               {loading ? (
                 <tr><td colSpan={columns.length + 1} className="px-5 py-10 text-center text-faint">Memuat...</td></tr>
-              ) : (detail.baris || []).length === 0 ? (
+              ) : rows.length === 0 ? (
                 <tr><td colSpan={columns.length + 1}><InlineState kind="kosong" compact title="Belum ada baris" description="Tambah yang pertama lewat tombol di atas." /></td></tr>
               ) : (
-                (detail.baris || []).map((row: FreeRow) => (
+                visibleRows.map((row: FreeRow) => (
                   <tr key={row.id} className="transition-colors hover:bg-app/70">
                     {columns.map((c: { id: number }) => (
                       <td key={c.id} className="whitespace-nowrap px-5 py-4">{row.data?.[String(c.id)] ?? "-"}</td>
@@ -134,6 +140,7 @@ export function TabelBebasDetail({ table, onBack }: TabelBebasDetailProps) {
               )}
             </tbody>
           </table>
+          <Pagination page={Math.min(page, totalPages)} totalPages={totalPages} total={rows.length} pageSize={pageSize} onPage={setPage} onPageSize={(size) => { setPageSize(size); setPage(1); }} />
         </Panel>
       )}
 

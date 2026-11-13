@@ -12,6 +12,7 @@ import type { AuditLog, RawAuditLog } from "./types";
 export function AuditView() {
   const [sheet, setSheet] = useState("semua");
   const [source, setSource] = useState("semua");
+  const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,9 +24,11 @@ export function AuditView() {
     async function fetchAuditLogs() {
       try {
         setLoading(true);
+        setLoadError(false);
         const response = await api.auditLog.getAll({
           sheet: sheet === "semua" ? undefined : sheet.toLowerCase(),
           source: source === "semua" ? undefined : source.toUpperCase(),
+          search: search.trim() || undefined,
           page: 1,
           limit: 50,
         });
@@ -58,12 +61,25 @@ export function AuditView() {
     }
 
     fetchAuditLogs();
-  }, [sheet, source, reloadKey]);
+  }, [sheet, source, search, reloadKey]);
 
+  const searchTerm = search.trim().toLowerCase();
   const filteredLogs = logs.filter((l) => {
     const sheetOk = sheet === "semua" || l.sheet.includes(sheet.toLowerCase());
     const sourceOk = source === "semua" || l.source.toUpperCase() === source.toUpperCase();
-    return sheetOk && sourceOk;
+    const searchableText = [
+      l.id,
+      l.tanggal,
+      l.jam,
+      l.sheet,
+      l.recordLabel,
+      l.action,
+      l.source,
+      l.actor,
+      l.detail,
+      ...(l.perubahan?.flatMap((change) => [change.field, change.sebelum, change.sesudah]) ?? []),
+    ].join(" ").toLowerCase();
+    return sheetOk && sourceOk && (!searchTerm || searchableText.includes(searchTerm));
   });
 
   const statsRingkasan: Stat[] = [
@@ -78,7 +94,14 @@ export function AuditView() {
       <div className="flex flex-col gap-6">
         <AuditHeader />
         <StatCards stats={statsRingkasan} />
-        <FilterBar sheet={sheet} onSheet={setSheet} source={source} onSource={setSource} />
+        <FilterBar
+          sheet={sheet}
+          onSheet={setSheet}
+          source={source}
+          onSource={setSource}
+          search={search}
+          onSearch={setSearch}
+        />
         <LogTimeline
           loadError={loadError}
           loading={loading}

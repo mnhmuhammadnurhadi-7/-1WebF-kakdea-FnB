@@ -89,10 +89,16 @@ export const dashboardApi = {
     return apiRequest<{ success: boolean; data: any }>(`/dashboard/summary?${params}`);
   },
 
-  getSalesTrend: async (periode?: string) => {
+  getCashflowTrend: async (periode?: string) => {
     const params = new URLSearchParams();
     if (periode) params.append('periode', periode);
-    return apiRequest<{ success: boolean; data: any }>(`/dashboard/tren-penjualan?${params}`);
+    return apiRequest<{ success: boolean; data: any }>(`/dashboard/grafik-kas?${params}`);
+  },
+
+  getInputSources: async (periode?: string) => {
+    const params = new URLSearchParams();
+    if (periode) params.append('periode', periode);
+    return apiRequest<{ success: boolean; data: { ai: number; manual: number; total: number; aiPersen: number; manualPersen: number } }>(`/dashboard/sumber-input?${params}`);
   },
 
   getStockWarnings: async () => {
@@ -166,13 +172,15 @@ export const publicProductsApi = {
 
 // Transactions API (Entri Transaksi - generic, terikat ke JenisTransaksi)
 export const transactionsApi = {
-  getAll: async (filters?: { business_unit?: string; jenis_transaksi_id?: number; tanggal_mulai?: string; tanggal_selesai?: string; search?: string }) => {
+  getAll: async (filters?: { business_unit?: string; jenis_transaksi_id?: number; tanggal_mulai?: string; tanggal_selesai?: string; search?: string; page?: number; limit?: number }) => {
     const params = new URLSearchParams();
     if (filters?.business_unit) params.append('business_unit', filters.business_unit);
     if (filters?.jenis_transaksi_id) params.append('jenis_transaksi_id', filters.jenis_transaksi_id.toString());
     if (filters?.tanggal_mulai) params.append('tanggal_mulai', filters.tanggal_mulai);
     if (filters?.tanggal_selesai) params.append('tanggal_selesai', filters.tanggal_selesai);
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
     return apiRequest<{ success: boolean; data: any }>(`/transactions?${params}`);
   },
 
@@ -515,6 +523,7 @@ export const publicCmsApi = {
 // Helper to resolve image URL correctly
 export function getImageUrl(path?: string | null): string {
   if (!path) return '';
+  if (path.startsWith('data:') || path.startsWith('blob:')) return path;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api/v1';

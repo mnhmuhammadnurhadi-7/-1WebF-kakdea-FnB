@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api";
 import { BrandPanel } from "./BrandPanel";
@@ -34,15 +35,28 @@ export function LoginView() {
   };
 
   return (
-    <main className="page-enter grid min-h-screen bg-cream lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,1fr)]" style={{ fontFamily: "var(--font-plus-jakarta), system-ui, sans-serif" }}>
+    <main className="page-enter grid min-h-screen bg-cream lg:grid-cols-[minmax(0,1.04fr)_minmax(420px,.96fr)]" style={{ fontFamily: "var(--font-plus-jakarta), system-ui, sans-serif" }}>
       <BrandPanel />
 
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10 sm:px-8">
-        <span aria-hidden="true" className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 select-none text-[240px] font-black leading-none tracking-[-.05em] text-black/[.04]">SOJU</span>
-        <div className="relative w-full max-w-[440px]">
-          <Link href="/customer" className="mb-8 inline-flex items-center gap-3 rounded-xl lg:hidden">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-brand text-[18px] font-extrabold text-white shadow-blue">S</span>
-            <span className="text-[18px] font-extrabold text-ink">SOJU</span>
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-cream px-5 py-10 sm:px-8">
+        <svg aria-hidden="true" viewBox="0 0 64 64" className="pointer-events-none absolute left-[7%] top-7 hidden size-14 text-[#E4E1DA] lg:block">
+          <path d="M12 25h40l-3 23a6 6 0 0 1-6 5H21a6 6 0 0 1-6-5l-3-23Z" fill="none" stroke="currentColor" strokeWidth="2.5" />
+          <path d="M22 18c0-3 2-3 2-6m8 6c0-3 2-3 2-6m8 6c0-3 2-3 2-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
+        </svg>
+        <svg aria-hidden="true" viewBox="0 0 64 64" className="pointer-events-none absolute right-[7%] top-8 hidden size-14 text-[#E4E1DA] lg:block">
+          <path d="M12 36c9-16 24-21 39-16-2 7-5 12-10 15l8 9-5 5-10-8c-5 3-11 3-18 1l-4 5-5-5 5-6Z" fill="none" stroke="currentColor" strokeLinejoin="round" strokeWidth="2.5" />
+          <circle cx="41" cy="27" r="1.5" fill="currentColor" />
+        </svg>
+        <span aria-hidden="true" className="pointer-events-none absolute -bottom-[.12em] right-2 hidden select-none text-[clamp(8rem,16vw,13rem)] font-black leading-none tracking-[-.08em] text-[#173675]/[.045] lg:block">
+          SOJU
+        </span>
+        <div className="relative z-10 w-full max-w-[390px]">
+          <Link href="/customer" className="mb-7 inline-flex items-center gap-3 rounded-xl lg:hidden">
+            <Image src="/soju.png" alt="" width={40} height={40} loading="eager" className="size-10 shrink-0 rounded-full object-cover shadow-blue" />
+            <span className="leading-tight">
+              <span className="block text-[18px] font-extrabold text-ink">SOJU</span>
+              <span className="block text-[10px] font-semibold tracking-[.08em] text-brand">KULINER &amp; FROZEN FOOD</span>
+            </span>
           </Link>
           <LoginCard email={email} onEmail={setEmail} password={password} onPassword={setPassword} loading={loading} error={error} onSubmit={handleLogin} />
         </div>

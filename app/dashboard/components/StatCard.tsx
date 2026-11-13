@@ -27,23 +27,23 @@ type StatCardProps = {
 
 export function StatCard({ label, value, sub, change, icon, tone }: StatCardProps) {
   return (
-    <article className="flex min-h-[168px] flex-col justify-between rounded-card bg-white px-6 py-[22px] shadow-card">
+    <article className="flex min-h-[164px] flex-col justify-between rounded-[20px] border border-line bg-white px-5 py-5 shadow-card transition-shadow hover:shadow-card-hover">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[11px] font-extrabold uppercase tracking-[.1em] text-label">{label}</p>
-          <p className="tabular mt-1.5 text-[26px] font-bold tracking-[-.03em]">{value}</p>
+          <p className="text-[10px] font-bold uppercase tracking-[.1em] text-faint">{label}</p>
+          <p className="tabular mt-2 text-[23px] font-bold tracking-[-.035em] text-ink">{value}</p>
         </div>
-        <span className={"flex size-[38px] items-center justify-center rounded-xl " + STAT_ICON[tone]}>
+        <span className={"flex size-9 shrink-0 items-center justify-center rounded-xl " + STAT_ICON[tone]}>
           <Icon name={icon} size={19} stroke={1.8} />
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-[12.5px] font-semibold">
+      <div className="flex items-center justify-between gap-2 text-[12px] font-medium">
         <span className="flex items-center gap-[7px] text-body">
           <span className={"size-2 rounded-full " + STAT_DOT[tone]} />
           {sub}
         </span>
-        {change && <span className="text-[11px] font-bold tracking-[.04em] text-faint">{change}</span>}
+        {change && <span className="text-right text-[10px] font-semibold text-faint">{change}</span>}
       </div>
     </article>
   );

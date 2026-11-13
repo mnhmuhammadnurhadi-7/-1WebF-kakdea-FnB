@@ -1,0 +1,77 @@
+warning: in the working copy of 'PANDUAN.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(auth)/login/components/BrandPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(auth)/login/components/LoginCard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(auth)/login/components/LoginView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/customer/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/ai/components/AiHeader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/ai/components/AiView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/ai/components/ChatComposer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/ai/components/ChatThread.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/ai/components/CommandChips.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/ai/components/QuickPrompts.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/audit/components/AuditHeader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/audit/components/AuditView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/audit/components/FilterBar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/audit/components/StatCards.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/cms/components/CmsHeader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/cms/components/CmsStats.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/cms/components/CmsView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/cms/components/ImageUpload.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/cms/components/useCmsData.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/cms/components/useProductEditor.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/DashboardView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/KpiGrid.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/SaldoKasCard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/SourceRatioCard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/StatCard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/WelcomeHeader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/components/types.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/Button.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/DataHeader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/DataTabs.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/DataView.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/Icon.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/JenisBadge.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/JenisEntriesTable.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/MasterTransaksiFeed.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/Panel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/TabelBebasDetail.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/TabelBebasTab.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/constants.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/data/components/format.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/profile/components/ProfileHero.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/globals.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/layout/DashboardFrame.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/sidebar/Sidebar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/sidebar/SidebarBrand.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/sidebar/SidebarNav.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/topbar/Topbar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/api.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/PANDUAN.md b/PANDUAN.md[m
+[1mindex 6731b12..d0606a0 100644[m
+[1m--- a/PANDUAN.md[m
+[1m+++ b/PANDUAN.md[m
+[36m@@ -25,7 +25,7 @@[m [mlib/        api.ts, whatsapp.ts[m
+ ## Cara pasang[m
+ 1. Hapus folder `app`, `components`, `lib` yang lama (jangan hapus package.json, public, .env, next.config).[m
+ 2. Salin tiga folder dari zip ini ke proyek, timpa `eslint.config.mjs` jika perlu.[m
+[31m-3. `npm run dev`. Dashboard tanpa backend: buka `http://localhost:3000/dashboard?testing`.[m
+[32m+[m[32m3. `npm run dev`. Untuk pratinjau dashboard dan Data tanpa backend, buka `http://localhost:3000/dashboard?preview=1`, lalu pilih **Data** di sidebar.[m
+ [m
+ ## Yang berubah[m
+ - `globals.css` dan `layout.tsx`: warna Figma + hanya font Plus Jakarta Sans (sebelumnya masih krem/amber + Fraunces).[m
+[1mdiff --git a/app/(auth)/login/components/BrandPanel.tsx b/app/(auth)/login/components/BrandPanel.tsx[m
+[1mindex 473ff4a..4111823 100644[m
+[1m--- a/app/(auth)/login/components/BrandPanel.tsx[m
+[1m+++ b/app/(auth)/login/components/BrandPanel.tsx[m
+[36m@@ -1,58 +1,54 @@[m
+[32m+[m[32mimport Image from "next/image";[m
+ import Link from "next/link";[m
+ [m
+[31m-/** Panel kiri bergaya Figma: gradasi navy, orbit dekoratif, pesan utama, dan kartu status sistem. */[m
+ export function BrandPanel() {[m
+   return ([m
+[31m-    <section className=

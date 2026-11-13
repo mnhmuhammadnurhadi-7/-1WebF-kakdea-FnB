@@ -4,7 +4,7 @@ type ChatComposerProps = { value: string; onChange: (v: string) => void; onSend:
 
 export function ChatComposer({ value, onChange, onSend }: ChatComposerProps) {
   return (
-    <div>
+    <div className="shrink-0">
       <div className="flex items-end gap-3 rounded-[22px] bg-white p-3 shadow-card transition focus-within:ring-4 focus-within:ring-brand/15">
         <textarea
           value={value}

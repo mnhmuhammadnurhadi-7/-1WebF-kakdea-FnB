@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { DataHeader } from "./DataHeader";
 import { DataTabs } from "./DataTabs";
+import { Button } from "./Button";
 import { EditJenisModal } from "./EditJenisModal";
 import { JenisEntriesTable } from "./JenisEntriesTable";
 import { MasterTransaksiFeed } from "./MasterTransaksiFeed";
@@ -50,7 +51,7 @@ export function DataView() {
   const tabs: ChipOption[] = [
     { id: "master", label: "Master Transaksi" },
     ...jenisList.map((j) => ({ id: String(j.id), label: j.namaTransaksi })),
-    { id: "tabel_bebas", label: "Tabel Bebas" },
+    { id: "tabel_bebas", label: "Pendataan" },
   ];
 
   const selectedJenis = jenisList.find((j) => String(j.id) === activeTab) || null;
@@ -69,6 +70,34 @@ export function DataView() {
       });
     }
   };
+  const tabActions = activeTab === "tabel_bebas" ? null : (
+    <>
+      {selectedJenis && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setEditJenisTarget(selectedJenis)}
+        >
+          Edit Tabel
+        </Button>
+      )}
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="download"
+        onClick={() => handleExportTransactions(selectedJenis?.id)}
+      >
+        Export ke Excel
+      </Button>
+      <Button
+        size="sm"
+        icon="plus"
+        onClick={() => tambah.openTambahTransaksi(selectedJenis?.id)}
+      >
+        Tambah Transaksi
+      </Button>
+    </>
+  );
 
   return (
     <>
@@ -76,22 +105,26 @@ export function DataView() {
         <StatePanel kind="gagal-memuat" subject="Data transaksi" description="Server tidak merespons saat mengambil catatan keuangan. Datamu aman, belum ada yang hilang." onRetry={loadJenisList} />
       ) : (
       <div className="flex flex-col gap-6">
-        <DataHeader
-          showActions={activeTab !== "tabel_bebas"}
-          hasSelectedJenis={!!selectedJenis}
-          onEditTable={() => setEditJenisTarget(selectedJenis)}
-          onExport={() => handleExportTransactions(selectedJenis?.id)}
-          onAdd={() => tambah.openTambahTransaksi(selectedJenis?.id)}
-        />
+        <DataHeader />
 
-        <DataTabs loading={loadingTabs} tabs={tabs} value={activeTab} onChange={setActiveTab} />
+        <div className="flex flex-col gap-3">
+          {tabActions && (
+            <div className="flex flex-wrap justify-end gap-2">
+              {tabActions}
+            </div>
+          )}
+          <DataTabs loading={loadingTabs} tabs={tabs} value={activeTab} onChange={setActiveTab} />
+        </div>
 
         {activeTab === "master" ? (
-          <MasterTransaksiFeed refreshKey={tick} onOpenJenis={(id) => setActiveTab(String(id))} />
+          <MasterTransaksiFeed
+            refreshKey={tick}
+            onOpenJenis={(id) => setActiveTab(String(id))}
+          />
         ) : activeTab === "tabel_bebas" ? (
           <TabelBebasTab />
         ) : selectedJenis ? (
-          <JenisEntriesTable jenis={selectedJenis} refreshKey={tick} onChanged={refresh} />
+          <JenisEntriesTable key={selectedJenis.id} jenis={selectedJenis} refreshKey={tick} onChanged={refresh} />
         ) : null}
       </div>
       )}

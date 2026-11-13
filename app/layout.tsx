@@ -1,18 +1,6 @@
 import type { Metadata } from "next";
-import { Fraunces, Public_Sans, Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-});
-
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-});
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -27,10 +15,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="id"
-      className={`${fraunces.variable} ${publicSans.variable} ${plusJakarta.variable} h-full antialiased`}
-    >
+    <html lang="id" className={`${plusJakarta.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>
     </html>
   );

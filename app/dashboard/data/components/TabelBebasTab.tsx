@@ -41,8 +41,10 @@ export function TabelBebasTab() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
   const openCreate = () => {
     setNamaTabel("");
@@ -117,7 +119,7 @@ export function TabelBebasTab() {
       {loading ? (
         <Panel className="flex items-center justify-center py-16"><div className="text-faint">Memuat...</div></Panel>
       ) : tables.length === 0 ? (
-        <Panel><InlineState kind="kosong" title="Belum ada tabel bebas" description="Buat yang pertama lewat tombol di atas." /></Panel>
+        <Panel><InlineState kind="kosong" title="Belum ada Pendataan" description="Buat yang pertama lewat tombol di atas." /></Panel>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tables.map((t) => (

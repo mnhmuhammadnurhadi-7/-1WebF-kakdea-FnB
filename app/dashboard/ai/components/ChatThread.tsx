@@ -14,7 +14,12 @@ type ChatThreadProps = {
 
 export function ChatThread({ messages, copiedId, onCopy, onRetry, onEdit, onPickCommand, scrollRef }: ChatThreadProps) {
   return (
-    <div ref={scrollRef} className="flex flex-1 flex-col gap-5 overflow-y-auto py-2 pr-1">
+    <div
+      ref={scrollRef}
+      role="log"
+      aria-label="Percakapan chat"
+      className="min-h-0 flex flex-1 flex-col gap-5 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-white/70 bg-white/50 p-4 shadow-card"
+    >
       {messages.map((m) => (
         <ChatMessageItem key={m.id} message={m} copied={copiedId === m.id} onCopy={onCopy} onRetry={onRetry} onEdit={onEdit} onPickCommand={onPickCommand} />
       ))}

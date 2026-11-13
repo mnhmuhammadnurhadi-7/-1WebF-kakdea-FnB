@@ -1,6 +1,21 @@
+import type { Entry } from "./types";
+
 export function formatRupiah(n: unknown): string {
   const num = Number(n || 0);
   return `Rp ${num.toLocaleString("id-ID")}`;
+}
+
+export function matchesEntrySearch(entry: Entry, searchTerm: string): boolean {
+  const query = searchTerm.trim().toLocaleLowerCase();
+  if (!query) return true;
+
+  return [
+    entry.detail,
+    entry.namaTransaksi,
+    entry.jenisTransaksi?.arah === "PEMASUKAN" ? "Pemasukan" : "Pengeluaran",
+    entry.tanggal,
+    formatRupiah(entry.nominal),
+  ].some((value) => String(value ?? "").toLocaleLowerCase().includes(query));
 }
 
 export function todayStr(): string {
