@@ -3,10 +3,7 @@ import type { ChipOption } from "./types";
 export const sheetTabs: ChipOption[] = [
   { id: "semua", label: "Semua" },
   { id: "transaksi", label: "Transaksi" },
-  { id: "stok", label: "Stok" },
-  { id: "order", label: "Order" },
-  { id: "tabel_bebas", label: "Tabel Bebas" },
-  { id: "user", label: "User" },
+  { id: "pendataan", label: "Pendataan" },
 ];
 
 export const sourceTabs: ChipOption[] = [
@@ -41,7 +38,8 @@ export const sheetTone: Record<string, Tone> = {
   transaksi: "brand",
   stok: "sky",
   order: "ok",
-  tabel_bebas: "warn",
+  pendataan: "warn",
+  Pendataan: "warn",
   user: "neutral",
 };
 

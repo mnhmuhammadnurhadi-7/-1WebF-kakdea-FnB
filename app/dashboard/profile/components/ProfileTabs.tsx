@@ -1,7 +1,6 @@
 import type { ProfileTab } from "./types";
 
 const TABS: { id: ProfileTab; label: string }[] = [
-  { id: "profil", label: "Profil Toko" },
   { id: "akun", label: "Akun Pengguna" },
   { id: "pengaturan", label: "Pengaturan" },
 ];

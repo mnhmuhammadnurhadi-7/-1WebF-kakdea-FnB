@@ -6,15 +6,6 @@ export interface UserData {
   toko: string;
 }
 
-export interface TokoData {
-  nama: string;
-  alamat: string;
-  telepon: string;
-  instagram: string;
-  whatsapp: string;
-  deskripsi: string;
-}
-
 export interface Pengaturan {
   notifWa: boolean;
   notifEmail: boolean;
@@ -25,4 +16,4 @@ export interface Pengaturan {
   bahasa: string;
 }
 
-export type ProfileTab = "profil" | "akun" | "pengaturan";
+export type ProfileTab = "akun" | "pengaturan";

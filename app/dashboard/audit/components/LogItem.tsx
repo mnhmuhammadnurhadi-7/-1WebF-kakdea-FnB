@@ -7,6 +7,8 @@ export function LogItem({ log: l, expanded, onToggle }: LogItemProps) {
   const meta = getActionMeta(l.action);
   const sTone = sheetTone[l.sheet] || "brand";
   const isAi = l.source.toUpperCase() === "AI";
+  const isAdd = ["TAMBAH", "CREATE", "ADDED"].includes(l.action.toUpperCase());
+  const isDelete = ["HAPUS", "DELETE", "REMOVED"].includes(l.action.toUpperCase());
 
   return (
     <div className="px-5 py-2">
@@ -38,9 +40,17 @@ export function LogItem({ log: l, expanded, onToggle }: LogItemProps) {
                 {l.perubahan.map((p, pIdx) => (
                   <div key={pIdx} className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-ink">{p.field}:</span>
-                    {p.sebelum && <span className="text-bad-text line-through">{p.sebelum}</span>}
-                    {p.sebelum && p.sesudah && <span className="text-faint">➔</span>}
-                    {p.sesudah && <span className="font-bold text-ok-text">{p.sesudah}</span>}
+                    {isAdd ? (
+                      <span className="font-bold text-ok-text">{p.sesudah}</span>
+                    ) : isDelete ? (
+                      <span className="font-bold text-bad-text">{p.sebelum}</span>
+                    ) : (
+                      <>
+                        <span className="whitespace-pre-line text-body">{p.sebelum}</span>
+                        <span className="text-faint">menjadi</span>
+                        <span className="whitespace-pre-line font-bold text-ok-text">{p.sesudah}</span>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

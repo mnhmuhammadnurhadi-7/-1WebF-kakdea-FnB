@@ -64,6 +64,7 @@ export function MasterTransaksiFeed({ refreshKey, onOpenJenis }: MasterTransaksi
             <tr>
               <th className="w-[68px]" />
               <th className={TH}>Tanggal</th>
+              <th className={TH}>Kode Transaksi</th>
               <th className={TH}>Keterangan</th>
               <th className={TH_CENTER}>Jenis Transaksi</th>
               <th className={TH}>Nominal</th>
@@ -71,10 +72,10 @@ export function MasterTransaksiFeed({ refreshKey, onOpenJenis }: MasterTransaksi
           </thead>
           <tbody className="divide-y divide-line-soft">
             {loading ? (
-              <tr><td colSpan={5} className="px-5 py-10 text-center text-faint">Memuat...</td></tr>
+              <tr><td colSpan={6} className="px-5 py-10 text-center text-faint">Memuat...</td></tr>
             ) : !Array.isArray(entries) || entries.length === 0 ? (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={6}>
                   <InlineState
                     kind="kosong"
                     compact
@@ -94,6 +95,7 @@ export function MasterTransaksiFeed({ refreshKey, onOpenJenis }: MasterTransaksi
                   >
                     <td className="py-3 pl-4"><ArahIcon arah={e.jenisTransaksi?.arah} /></td>
                     <td className="whitespace-nowrap px-4 py-3"><TanggalCell tanggal={e.tanggal} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-semibold text-brand">{e.kode || "-"}</td>
                     <td className="max-w-[280px] px-4 py-3 font-semibold text-ink">{e.detail || "-"}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-center"><JenisBadge arah={e.jenisTransaksi?.arah} nama={e.namaTransaksi} /></td>
                     <td className={"tabular whitespace-nowrap px-4 py-3 text-left text-[14.5px] font-extrabold " + (masuk ? "text-ok-text" : "text-bad")}>

@@ -421,7 +421,7 @@ export const reportsApi = {
 // Audit Log API - default backend 7 hari terakhir, kirim days untuk ubah
 // rentang (data lama TIDAK pernah dihapus, ini murni filter tampilan)
 export const auditLogApi = {
-  getAll: async (filters?: { sheet?: string; source?: string; search?: string; page?: number; limit?: number; days?: number | 'all' }) => {
+  getAll: async (filters?: { sheet?: string; source?: string; search?: string; page?: number; limit?: number; days?: number | 'all'; dateFrom?: string; dateTo?: string }) => {
     const params = new URLSearchParams();
     if (filters?.sheet && filters.sheet !== 'semua') params.append('sheet', filters.sheet);
     if (filters?.source && filters.source !== 'semua') params.append('source', filters.source);
@@ -429,6 +429,8 @@ export const auditLogApi = {
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
     if (filters?.days !== undefined) params.append('days', filters.days.toString());
+    if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+    if (filters?.dateTo) params.append('dateTo', filters.dateTo);
     return apiRequest<{ success: boolean; data: any }>(`/audit-log?${params}`);
   },
 };

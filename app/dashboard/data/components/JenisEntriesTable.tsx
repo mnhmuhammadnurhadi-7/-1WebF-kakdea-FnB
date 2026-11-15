@@ -97,7 +97,7 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
 
   const hasSearch = searchTerm.trim().length > 0;
   const masuk = jenis.arah === "PEMASUKAN";
-  const colSpan = 7 + columns.length;
+  const colSpan = 8 + columns.length;
 
   return (
     <Panel className="overflow-hidden">
@@ -115,6 +115,7 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
           <thead className="bg-app">
             <tr>
               <th className={TH}>Tanggal</th>
+              <th className={TH}>Kode Transaksi</th>
               <th className={TH}>Keterangan</th>
               <th className={TH_CENTER}>Jenis Transaksi</th>
               <th className={TH}>Nominal</th>
@@ -148,6 +149,7 @@ export function JenisEntriesTable({ jenis, refreshKey, onChanged }: JenisEntries
                   onClick={() => setEditEntry(e)}
                 >
                   <td className="whitespace-nowrap px-4 py-3"><TanggalCell tanggal={e.tanggal} /></td>
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-semibold text-brand">{e.kode || "-"}</td>
                   <td className="px-4 py-3 font-semibold text-ink">{e.detail || "-"}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-center">{e.namaTransaksi}</td>
                   <td className={"tabular whitespace-nowrap px-4 py-3 text-left text-[14.5px] font-extrabold " + (masuk ? "text-ok-text" : "text-bad")}>
