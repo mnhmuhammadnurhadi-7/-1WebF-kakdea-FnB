@@ -4,7 +4,11 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useContactInfo } from "@/lib/whatsapp";
+import { CartProvider, useCart } from "@/components/customer/CartContext";
+import { CartDrawer } from "@/components/customer/CartDrawer";
+import { customerApi } from "@/lib/customerApi";
 
 const MenuIcon = (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -47,6 +51,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   }, [pathname]);
 
   return (
+    <CartProvider>
     <div
       className="customer-root min-h-screen"
       style={{ backgroundColor: "#FAF8FF", fontFamily: "var(--font-plus-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif" }}
@@ -88,16 +93,20 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               ))}
             </nav>
 
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen((o) => !o)}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="menu-mobile"
-              aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
-              className="c-press -mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-white md:hidden"
-            >
-              {mobileMenuOpen ? CloseIcon : MenuIcon}
-            </button>
+            <div className="flex items-center gap-2">
+              <CartHeaderButton />
+              <CustomerAccountButton />
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen((o) => !o)}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="menu-mobile"
+                aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
+                className="c-press -mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-white md:hidden"
+              >
+                {mobileMenuOpen ? CloseIcon : MenuIcon}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -165,7 +174,42 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           </div>
         </div>
       </footer>
+      <CartDrawer />
     </div>
+    </CartProvider>
+  );
+}
+
+function CartHeaderButton() {
+  const { itemCount, openCart } = useCart();
+  return (
+    <button type="button" onClick={openCart} aria-label={`Buka keranjang, ${itemCount} item`} className="relative inline-flex h-10 items-center gap-2 rounded-full border border-white/30 px-3 text-sm font-semibold text-white hover:bg-white/10">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L22 8H6" />
+        <circle cx="10" cy="21" r="1" /><circle cx="18" cy="21" r="1" />
+      </svg>
+      <span className="hidden sm:inline">Keranjang</span>
+      {itemCount > 0 && <span className="min-w-5 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold text-[#00236F]" style={{ backgroundColor: "#82F5C1" }}>{itemCount}</span>}
+    </button>
+  );
+}
+
+function CustomerAccountButton() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => setSignedIn(customerApi.isAuthenticated()), [pathname]);
+  return (
+    <button
+      type="button"
+      onClick={() => router.push(signedIn ? "/dashboard-customer/profil" : "/customer/akun?next=%2Fdashboard-customer%2Fprofil")}
+      aria-label={signedIn ? "Buka profil customer" : "Masuk atau daftar customer"}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 text-white hover:bg-white/10"
+    >
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+      </svg>
+    </button>
   );
 }
 

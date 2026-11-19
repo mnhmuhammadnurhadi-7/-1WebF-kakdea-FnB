@@ -43,6 +43,15 @@ export interface OrderDraft {
   catatan?: string;
 }
 
+export interface CartOrderLine {
+  nama: string;
+  varian?: string;
+  jumlah: number;
+  harga: number;
+  satuan?: string;
+  catatan?: string;
+}
+
 /** Template pesan WA. Baris varian & catatan hilang otomatis kalau kosong. */
 export function buildOrderMessage({ nama, varian, jumlah, catatan }: OrderDraft): string {
   const lines = ["Halo kak, saya mau pesan:", `*${nama}*`];
@@ -51,6 +60,20 @@ export function buildOrderMessage({ nama, varian, jumlah, catatan }: OrderDraft)
   const note = catatan?.trim();
   if (note) lines.push(`Catatan: ${note}`);
   lines.push("Terima kasih!");
+  return lines.join("\n");
+}
+
+export function buildCartMessage(items: CartOrderLine[], total: number): string {
+  const lines = ["Halo kak, saya mau pesan:", ""];
+  items.forEach((item, index) => {
+    lines.push(`${index + 1}. *${item.nama}*`);
+    if (item.varian) lines.push(`   Varian: ${item.varian}`);
+    lines.push(`   Jumlah: ${item.jumlah}${item.satuan ? ` ${item.satuan}` : ""}`);
+    if (item.catatan) lines.push(`   Catatan: ${item.catatan}`);
+    lines.push(`   Subtotal: Rp ${(item.harga * item.jumlah).toLocaleString("id-ID")}`);
+    if (index < items.length - 1) lines.push("");
+  });
+  lines.push("", `*Perkiraan total: Rp ${total.toLocaleString("id-ID")}*`, "Mohon konfirmasi ketersediaan dan totalnya. Terima kasih!");
   return lines.join("\n");
 }
 

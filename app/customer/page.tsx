@@ -214,7 +214,7 @@ export default function CustomerHomePage() {
                         type="button"
                         tabIndex={idx === heroSlide ? 0 : -1}
                         aria-hidden={idx !== heroSlide}
-                        aria-label={`Pesan ${product.namaBarang}`}
+                        aria-label={`Pilih ${product.namaBarang}`}
                         onClick={() => setSelectedProduct(product)}
                         className="c-hero-slide absolute inset-0 cursor-pointer"
                         data-active={idx === heroSlide}
@@ -367,7 +367,7 @@ export default function CustomerHomePage() {
         </div>
       </section>
 
-      <OrderModal product={selectedProduct} waNumber={contact.waNumber} onClose={() => setSelectedProduct(null)} />
+      <OrderModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>
   );
 }
@@ -382,7 +382,7 @@ function FeaturedWide({ product, onOpen }: { product: any; onOpen: (p: any) => v
     <button
       type="button"
       onClick={() => onOpen(product)}
-      aria-label={`Pesan ${product.namaBarang}`}
+      aria-label={`Pilih ${product.namaBarang}`}
       className="c-card group flex flex-col overflow-hidden rounded-2xl bg-white text-left sm:col-span-2 sm:flex-row lg:col-span-7"
     >
       <div className="relative min-h-[220px] overflow-hidden sm:w-1/2" style={{ backgroundColor: "#F2F3FF" }}>
@@ -419,7 +419,7 @@ function FeaturedWide({ product, onOpen }: { product: any; onOpen: (p: any) => v
             style={{ backgroundColor: "#25D366" }}
           >
             {WhatsAppIcon}
-            Pesan
+            Pilih
           </span>
         </div>
       </div>

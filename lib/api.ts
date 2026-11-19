@@ -76,6 +76,9 @@ export const authApi = {
     return apiRequest<{ success: boolean; data: any }>('/auth/me');
   },
 
+  updateMe: async (data: { nama: string; email: string }) => apiRequest<{ success: boolean; data: any }>('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
+  changePassword: async (passwordLama: string, passwordBaru: string) => apiRequest<{ success: boolean; message?: string }>('/auth/change-password', { method: 'POST', body: JSON.stringify({ passwordLama, passwordBaru }) }),
+
   logout: () => {
     clearToken();
   },
@@ -435,6 +438,16 @@ export const auditLogApi = {
   },
 };
 
+export const usersApi = {
+  getAll: () => apiRequest<{ success: boolean; data: any[] }>('/users'),
+  create: (data: { nama: string; email: string; password: string; peran: 'ADMIN' | 'SUPER_ADMIN' }) => apiRequest<{ success: boolean; data: any }>('/users', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+export const customerOrdersApi = {
+  getAll: () => apiRequest<{ success: boolean; data: any[] }>('/customer-orders'),
+  updateStatus: (id: number, status: string) => apiRequest<{ success: boolean; data: any }>(`/customer-orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+};
+
 // CMS API (Admin - full CRUD)
 export const cmsApi = {
   // Content CRUD
@@ -466,35 +479,6 @@ export const cmsApi = {
       method: 'DELETE',
     });
   },
-
-  // Menu CRUD
-  getMenu: async () => {
-    return apiRequest<{ success: boolean; data: any }>('/cms/menu');
-  },
-
-  getMenuById: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`);
-  },
-
-  createMenu: async (data: { label: string; path: string; urutan?: number; aktif?: boolean }) => {
-    return apiRequest<{ success: boolean; data: any }>('/cms/menu', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  updateMenu: async (id: number, data: { label?: string; path?: string; urutan?: number; aktif?: boolean }) => {
-    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  deleteMenu: async (id: number) => {
-    return apiRequest<{ success: boolean; data: any }>(`/cms/menu/${id}`, {
-      method: 'DELETE',
-    });
-  },
 };
 
 // Public CMS API (untuk customer page - tanpa auth)
@@ -511,13 +495,6 @@ export const publicCmsApi = {
     const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/cms/content/${key}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch public content');
-    return response.json();
-  },
-
-  getMenu: async () => {
-    const url = `${API_BASE_URL.replace('/api/v1', '/api/public')}/cms/menu`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch public menu');
     return response.json();
   },
 };
@@ -544,6 +521,8 @@ export const api = {
   transactionTypes: transactionTypesApi,
   reports: reportsApi,
   auditLog: auditLogApi,
+  users: usersApi,
+  customerOrders: customerOrdersApi,
   freeTables: freeTablesApi,
   cms: cmsApi,
   publicCms: publicCmsApi,

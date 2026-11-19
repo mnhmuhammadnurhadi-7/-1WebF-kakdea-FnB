@@ -44,8 +44,11 @@ export function ProfileView() {
         if (res.success && res.data) {
           setUser((prev) => ({
             ...prev,
+            id: res.data.id,
             nama: res.data.nama || prev.nama,
             email: res.data.email || prev.email,
+            peran: res.data.peran,
+            jabatan: res.data.peran === "SUPER_ADMIN" ? "Super Admin" : "Admin",
           }));
         }
       } catch (error) {
@@ -60,9 +63,15 @@ export function ProfileView() {
 
   void loadingUser;
 
-  const handleSimpan = () => {
-    setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 2200);
+  const handleSimpan = async () => {
+    try {
+      const result = await api.auth.updateMe({ nama: user.nama, email: user.email });
+      setUser((prev) => ({ ...prev, id: result.data.id, peran: result.data.peran, nama: result.data.nama, email: result.data.email }));
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2200);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Profil belum dapat disimpan.");
+    }
   };
 
   return (

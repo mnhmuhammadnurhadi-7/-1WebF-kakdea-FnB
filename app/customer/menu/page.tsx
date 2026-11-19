@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { OrderModal } from "@/components/customer/OrderModal";
 import { PageHeader } from "@/components/customer/PageHeader";
 import { ProductCard } from "@/components/customer/ProductCard";
-import { parseVarian, useContactInfo } from "@/lib/whatsapp";
+import { parseVarian } from "@/lib/whatsapp";
 
 const SearchIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -15,7 +15,6 @@ const SearchIcon = (
 );
 
 export default function CustomerMenuPage() {
-  const contact = useContactInfo();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -142,7 +141,7 @@ export default function CustomerMenuPage() {
         </div>
       </section>
 
-      <OrderModal product={selectedProduct} waNumber={contact.waNumber} onClose={() => setSelectedProduct(null)} />
+      <OrderModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </>
   );
 }

@@ -4,14 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SIDEBAR_MENU } from "./menu";
 import { SidebarIcon } from "./SidebarIcon";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 /** Daftar menu; menu aktif ditentukan dari alamat halaman. */
 export function SidebarNav() {
   const pathname = usePathname();
+  const [role, setRole] = useState<string>("");
+  useEffect(() => { api.auth.getMe().then((res) => setRole(res.data.peran)).catch(() => setRole("ADMIN")); }, []);
 
   return (
     <nav className="flex flex-col gap-1 px-3 py-4">
-      {SIDEBAR_MENU.map((item) => {
+      {SIDEBAR_MENU.filter((item) => !item.superAdminOnly || role === "SUPER_ADMIN").map((item) => {
         const active = item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
         return (
           <Link

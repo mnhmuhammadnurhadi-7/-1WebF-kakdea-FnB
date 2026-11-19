@@ -20,7 +20,7 @@ export function ProductCard({ product, onOpen, badge, imageHeight = 190, showDes
     <button
       type="button"
       onClick={() => onOpen(product)}
-      aria-label={`Pesan ${product.namaBarang}`}
+      aria-label={`Pilih ${product.namaBarang}`}
       className={`c-card group flex w-full flex-col overflow-hidden rounded-2xl bg-white text-left ${className}`}
     >
       <div className="relative w-full overflow-hidden" style={{ height: imageHeight, backgroundColor: "#F2F3FF" }}>
@@ -59,7 +59,7 @@ export function ProductCard({ product, onOpen, badge, imageHeight = 190, showDes
             style={{ backgroundColor: "#25D366" }}
           >
             {WhatsAppIcon}
-            Pesan
+            Pilih
           </span>
         </div>
       </div>

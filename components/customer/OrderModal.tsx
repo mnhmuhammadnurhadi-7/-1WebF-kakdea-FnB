@@ -3,25 +3,26 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProductVisual } from "@/components/customer/ProductVisual";
-import { ChevronDownIcon, CloseIcon, MinusIcon, PlusIcon, WhatsAppIcon } from "@/components/customer/icons";
-import { buildOrderMessage, openWhatsApp, parseVarian } from "@/lib/whatsapp";
+import { ChevronDownIcon, CloseIcon, MinusIcon, PlusIcon } from "@/components/customer/icons";
+import { parseVarian } from "@/lib/whatsapp";
+import { useCart } from "./CartContext";
 
 interface OrderModalProps {
   product: any | null;
-  waNumber: string;
   onClose: () => void;
 }
 
 const EXIT_MS = 200;
 const MAX_QTY = 99;
 
-export function OrderModal({ product, waNumber, onClose }: OrderModalProps) {
+export function OrderModal({ product, onClose }: OrderModalProps) {
   if (typeof document === "undefined" || !product) return null;
   // key = id supaya form (varian/jumlah/catatan) selalu mulai bersih untuk tiap menu.
-  return createPortal(<OrderSheet key={product.id} product={product} waNumber={waNumber} onClose={onClose} />, document.body);
+  return createPortal(<OrderSheet key={product.id} product={product} onClose={onClose} />, document.body);
 }
 
-function OrderSheet({ product, waNumber, onClose }: { product: any; waNumber: string; onClose: () => void }) {
+function OrderSheet({ product, onClose }: { product: any; onClose: () => void }) {
+  const cart = useCart();
   const varianList = useMemo(() => parseVarian(product.varian), [product.varian]);
   const hasVarian = varianList.length > 0;
 
@@ -96,16 +97,14 @@ function OrderSheet({ product, waNumber, onClose }: { product: any; waNumber: st
     setQtyText(String(clamped));
   };
 
-  const handleOrder = () => {
+  const handleAddToCart = () => {
     if (hasVarian && !varian) {
       setVarianError(true);
       selectRef.current?.focus();
       return;
     }
-    openWhatsApp(
-      waNumber,
-      buildOrderMessage({ nama: product.namaBarang, varian: varian || undefined, jumlah, catatan })
-    );
+    cart.addItem(product, varian, jumlah, catatan);
+    requestClose();
   };
 
   const fieldStyle: React.CSSProperties = { borderColor: "#DAE2FD", color: "#131B2E", backgroundColor: "#FFFFFF" };
@@ -283,12 +282,12 @@ function OrderSheet({ product, waNumber, onClose }: { product: any; waNumber: st
           </div>
           <button
             type="button"
-            onClick={handleOrder}
+            onClick={handleAddToCart}
             className="c-press inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold text-white"
             style={{ backgroundColor: "#25D366" }}
           >
-            {WhatsAppIcon}
-            Pesan via WhatsApp
+            <span aria-hidden="true" className="text-xl leading-none">+</span>
+            Tambah ke Keranjang
           </button>
         </div>
       </div>
