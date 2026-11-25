@@ -1,0 +1,16 @@
+node_modules
+.next
+.env
+.env.*
+app.zip
+components.zip
+ddsd
+.git
+.gitignore
+.DS_Store
+coverage
+tsconfig.tsbuildinfo
+*.log
+*.md
+Dockerfile
+.dockerignore

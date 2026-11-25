@@ -1,0 +1,63 @@
+import { TONE_CHIP, TONE_DOT, getActionMeta, sheetTone } from "./constants";
+import type { AuditLog } from "./types";
+
+type LogItemProps = { log: AuditLog; expanded: boolean; onToggle: () => void };
+
+export function LogItem({ log: l, expanded, onToggle }: LogItemProps) {
+  const meta = getActionMeta(l.action);
+  const sTone = sheetTone[l.sheet] || "brand";
+  const isAi = l.source.toUpperCase() === "AI";
+  const isAdd = ["TAMBAH", "CREATE", "ADDED"].includes(l.action.toUpperCase());
+  const isDelete = ["HAPUS", "DELETE", "REMOVED"].includes(l.action.toUpperCase());
+
+  return (
+    <div className="px-3 py-2 sm:px-5">
+      <div className="relative flex flex-col gap-3 rounded-2xl border border-line-soft bg-[#fbfcff] p-3.5 transition-shadow hover:shadow-card sm:p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className={"size-2.5 shrink-0 rounded-full " + TONE_DOT[meta.tone]} aria-hidden="true" />
+            <span className="break-words text-[14.5px] font-bold tracking-[-.01em] text-ink">{l.recordLabel}</span>
+            <span className={"rounded-full px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-[.06em] " + TONE_CHIP[sTone]}>{l.sheet}</span>
+            <span className={"rounded-full px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-[.06em] " + (isAi ? TONE_CHIP.sky : TONE_CHIP.neutral)}>{l.source}</span>
+            <span className={"rounded-full px-2.5 py-1 text-[10.5px] font-extrabold " + TONE_CHIP[meta.tone]}>{meta.label}</span>
+          </div>
+        </div>
+
+        {l.detail && <p className="text-[13px] leading-relaxed text-body">{l.detail}</p>}
+
+        <p className="text-[11.5px] text-faint">
+          oleh <strong className="font-bold text-ink">{l.actor}</strong> • {l.tanggal} · {l.jam}
+        </p>
+
+        {l.perubahan && l.perubahan.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <button type="button" onClick={onToggle} className="self-start text-[12.5px] font-bold text-brand hover:underline">
+              {expanded ? "Sembunyikan detail perubahan ▲" : `Lihat ${l.perubahan.length} detail perubahan ▼`}
+            </button>
+
+            {expanded && (
+              <div className="flex flex-col gap-2 rounded-xl bg-cream p-3 text-[12.5px]">
+                {l.perubahan.map((p, pIdx) => (
+                  <div key={pIdx} className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-ink">{p.field}:</span>
+                    {isAdd ? (
+                      <span className="font-bold text-ok-text">{p.sesudah}</span>
+                    ) : isDelete ? (
+                      <span className="font-bold text-bad-text">{p.sebelum}</span>
+                    ) : (
+                      <>
+                        <span className="whitespace-pre-line text-body">{p.sebelum}</span>
+                        <span className="text-faint">menjadi</span>
+                        <span className="whitespace-pre-line font-bold text-ok-text">{p.sesudah}</span>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
