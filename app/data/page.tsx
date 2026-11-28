@@ -432,7 +432,7 @@ export default function DataPage() {
                 { value: "__new__", label: "+ Tambahkan Jenis Transaksi Baru" },
               ]}
             />
-            <InputField label="Nominal (Rp)" type="number" required value={txForm.nominal} onChange={(v) => setTxForm((f: any) => ({ ...f, nominal: v }))} />
+            <InputField label="Nominal (Rp)" type="currency" placeholder="Contoh: 35.000" required value={txForm.nominal} onChange={(v) => setTxForm((f: any) => ({ ...f, nominal: v }))} />
             <div className="flex gap-3">
               <InputField label="Debit" className="flex-1" placeholder="Opsional" value={txForm.debit} onChange={(v) => setTxForm((f: any) => ({ ...f, debit: v }))} />
               <InputField label="Kredit" className="flex-1" placeholder="Opsional" value={txForm.kredit} onChange={(v) => setTxForm((f: any) => ({ ...f, kredit: v }))} />
@@ -659,7 +659,7 @@ function JenisEntriesTable({ jenis, refreshKey, onChanged }: { jenis: any; refre
           <div className="flex flex-col gap-4">
             <InputField label="Tanggal" type="date" value={editForm.tanggal} onChange={(v) => setEditForm((f: any) => ({ ...f, tanggal: v }))} />
             <InputField label="Keterangan" value={editForm.detail} onChange={(v) => setEditForm((f: any) => ({ ...f, detail: v }))} />
-            <InputField label="Nominal (Rp)" type="number" value={editForm.nominal} onChange={(v) => setEditForm((f: any) => ({ ...f, nominal: v }))} required />
+            <InputField label="Nominal (Rp)" type="currency" placeholder="Contoh: 35.000" value={editForm.nominal} onChange={(v) => setEditForm((f: any) => ({ ...f, nominal: v }))} required />
             <div className="flex gap-3">
               <InputField label="Debit" className="flex-1" value={editForm.debit} onChange={(v) => setEditForm((f: any) => ({ ...f, debit: v }))} />
               <InputField label="Kredit" className="flex-1" value={editForm.kredit} onChange={(v) => setEditForm((f: any) => ({ ...f, kredit: v }))} />

@@ -1,6 +1,14 @@
 import React from "react";
 
-type InputType = "text" | "email" | "password" | "number" | "date" | "select" | "textarea";
+type InputType = "text" | "email" | "password" | "number" | "currency" | "date" | "select" | "textarea";
+
+function formatRupiahDigits(raw: string | undefined): string {
+  if (!raw) return "";
+  const digits = String(raw).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  const normalized = digits.replace(/^0+(?=\d)/, "");
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 
 interface Option {
   value: string;
@@ -97,6 +105,28 @@ export function InputField({
           disabled={disabled}
           className={`${baseInputClass} ${errorClass} resize-y min-h-[96px]`}
         />
+      ) : type === "currency" ? (
+        <div className="relative flex items-center">
+          <span className="pointer-events-none absolute left-4 text-[14px] font-bold text-accent select-none">
+            Rp
+          </span>
+          <input
+            id={inputId}
+            type="text"
+            inputMode="numeric"
+            required={required}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error || helper ? messageId : undefined}
+            value={formatRupiahDigits(value)}
+            onChange={(e) => {
+              const rawDigits = e.target.value.replace(/[^0-9]/g, "");
+              onChange?.(rawDigits);
+            }}
+            placeholder={placeholder || "0"}
+            disabled={disabled}
+            className={`${baseInputClass} ${errorClass} pl-11 font-semibold tabular-nums`}
+          />
+        </div>
       ) : (
         <input
           id={inputId}

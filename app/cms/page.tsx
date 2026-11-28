@@ -823,8 +823,8 @@ export default function CMSPage() {
           />
           <InputField
             label="Harga"
-            type="number"
-            placeholder="Contoh: 25000"
+            type="currency"
+            placeholder="Contoh: 25.000"
             value={productForm.hargaDefault}
             onChange={(v) => {
               setProductError("");
